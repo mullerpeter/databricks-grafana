@@ -23,11 +23,11 @@
     "links": [
       {
         "name": "Website",
-        "url": "https://github.com/grafana/grafana-starter-datasource-backend"
+        "url": "https://github.com/mullerpeter/databricks-grafana"
       },
       {
         "name": "License",
-        "url": "https://github.com/grafana/grafana-starter-datasource-backend/blob/master/LICENSE"
+        "url": "https://github.com/mullerpeter/databricks-grafana/blob/master/LICENSE"
       }
     ],
     "screenshots": [],
