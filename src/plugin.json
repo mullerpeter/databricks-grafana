@@ -10,7 +10,7 @@
     "description": "Databricks SQL Connector",
     "author": {
       "name": "Peter Müller",
-      "url": ""
+      "url": "https://github.com/mullerpeter/databricks-grafana"
     },
     "keywords": [
       "databricks",

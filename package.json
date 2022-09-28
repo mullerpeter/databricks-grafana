@@ -1,13 +1,13 @@
 {
   "name": "climeworks-databricks",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Databricks SQL Connector",
   "scripts": {
     "build": "grafana-toolkit plugin:build",
     "test": "grafana-toolkit plugin:test",
     "dev": "grafana-toolkit plugin:dev",
     "watch": "grafana-toolkit plugin:dev --watch",
-    "sign": "grafana-toolkit plugin:sign",
+    "sign": "grafana-toolkit plugin:sign --rootUrls https://localhost:3000",
     "start": "yarn watch"
   },
   "author": "Peter Müller",
