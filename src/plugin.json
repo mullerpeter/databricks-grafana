@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
   "type": "datasource",
   "name": "databricks-community",
-  "id": "databricks-community",
+  "id": "mullerpeter-databricks-datasource",
   "metrics": true,
   "backend": true,
   "executable": "gpx_databricks",
