@@ -1,8 +1,9 @@
-# Grafana Data Source Backend Plugin Template
+# Databricks Grafana Data Source Backend Plugin
 
-[![Build](https://github.com/grafana/grafana-starter-datasource-backend/workflows/CI/badge.svg)](https://github.com/grafana/grafana-datasource-backend/actions?query=workflow%3A%22CI%22)
+[![Build](https://github.com/mullerpeter/databricks-grafana/workflows/CI/badge.svg)](https://github.com/mullerpeter/databricks-grafana/actions?query=workflow%3A%22CI%22)
 
-This template is a starting point for building Grafana Data Source Backend Plugins
+### WIP
+This Grafana Data Source Plugin allows direct queries to Databricks.
 
 ## What is Grafana Data Source Backend Plugin?
 
