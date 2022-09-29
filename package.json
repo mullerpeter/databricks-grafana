@@ -7,7 +7,7 @@
     "test": "grafana-toolkit plugin:test",
     "dev": "grafana-toolkit plugin:dev",
     "watch": "grafana-toolkit plugin:dev --watch",
-    "sign": "grafana-toolkit plugin:sign --rootUrls https://localhost:3000",
+    "sign": "grafana-toolkit plugin:sign --rootUrls http://localhost:3000",
     "start": "yarn watch"
   },
   "author": "Peter Müller",
