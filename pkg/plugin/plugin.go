@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	_ "github.com/databricks/databricks-sql-go"
-	"math/rand"
 	"time"
 
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
@@ -31,11 +30,23 @@ var (
 	_                           backend.StreamHandler         = (*SampleDatasource)(nil)
 	_                           instancemgmt.InstanceDisposer = (*SampleDatasource)(nil)
 	databricksConnectionsString string
+	databricksDB                *sql.DB
 )
 
 // NewSampleDatasource creates a new datasource instance.
 func NewSampleDatasource(settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
-	databricksConnectionsString = settings.DecryptedSecureJSONData["apiKey"]
+	databricksConnectionsString = fmt.Sprintf("databricks://:%s@%s/%s", settings.DecryptedSecureJSONData["token"], settings.DecryptedSecureJSONData["hostname"], settings.DecryptedSecureJSONData["path"])
+	if databricksConnectionsString != "" {
+		log.DefaultLogger.Info("Init Databricks SQL DB")
+		db, err := sql.Open("databricks", databricksConnectionsString)
+		if err != nil {
+			log.DefaultLogger.Info("DB Init Error", "err", err)
+		} else {
+			databricksDB = db
+			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
+		}
+	}
+
 	return &SampleDatasource{}, nil
 }
 
@@ -78,7 +89,6 @@ type queryModel struct {
 	ValueColumnName string `json:"valueColumnName"`
 	WhereQuery      string `json:"whereQuery"`
 	TableName       string `json:"tableName"`
-	Limit           int    `json:"limit"`
 }
 
 func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, query backend.DataQuery) backend.DataResponse {
@@ -87,19 +97,12 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 	// Unmarshal the JSON into our queryModel.
 	var qm queryModel
 
-	dsn := databricksConnectionsString
-
-	if dsn == "" {
-		log.DefaultLogger.Info("No connection string found." +
-			"Set the DATABRICKS_DSN environment variable, and try again.")
-	}
-
-	db, err := sql.Open("databricks", dsn)
-
+	err := json.Unmarshal(query.JSON, &qm)
 	if err != nil {
-		log.DefaultLogger.Info("Querry Error", "err", err)
+		response.Error = err
+		log.DefaultLogger.Info("Query Parsing Error", "err", err)
+		return response
 	}
-	response.Error = json.Unmarshal(query.JSON, &qm)
 
 	seconds_interval := int64(query.Interval / 1000000000)
 	log.DefaultLogger.Info("Querry Interval (sec):", seconds_interval)
@@ -121,24 +124,30 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 		qm.TimeColumnName,
 		seconds_interval)
 	log.DefaultLogger.Info("Query", "query", queryString)
-	if response.Error != nil {
-		return response
-	}
 
-	rows, err := db.Query(queryString)
+	rows, err := databricksDB.Query(queryString)
+	defer rows.Close()
 
 	if err != nil {
-		log.DefaultLogger.Info("Querry Error", "err", err)
+		response.Error = err
+		log.DefaultLogger.Info("Query Execution Error", "err", err)
+		return response
 	}
-	defer rows.Close()
 
 	rowCount := 0
 	for rows.Next() {
 		rowCount = rowCount + 1
 	}
 
-	rows, _ = db.Query(queryString)
+	rows, _ = databricksDB.Query(queryString)
 	cols, err := rows.Columns() // Remember to check err afterwards
+
+	if err != nil {
+		response.Error = err
+		log.DefaultLogger.Info("Extracting Columns Error", "err", err)
+		return response
+	}
+
 	log.DefaultLogger.Info("Columns:", cols)
 	vals := make([]interface{}, len(cols))
 
@@ -155,6 +164,11 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 			value     float32
 		)
 		err = rows.Scan(&timestamp, &value)
+		if err != nil {
+			response.Error = err
+			log.DefaultLogger.Info("Row Scan Error", "err", err)
+			return response
+		}
 		//log.DefaultLogger.Info("Row Next", "err", err)
 		//log.DefaultLogger.Info("Returned timestamp", timestamp)
 		//log.DefaultLogger.Info("Returned value", value)
@@ -165,7 +179,9 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 	err = rows.Err()
 
 	if err != nil {
-		log.DefaultLogger.Info("Querry Error", "err", err)
+		response.Error = err
+		log.DefaultLogger.Info("Row Error", "err", err)
+		return response
 	}
 
 	// create data frame response.
@@ -201,17 +217,38 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 func (d *SampleDatasource) CheckHealth(_ context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
 	log.DefaultLogger.Info("CheckHealth called", "request", req)
 
-	var status = backend.HealthStatusOk
-	var message = "Data source is working"
+	dsn := databricksConnectionsString
 
-	if rand.Int()%2 == 0 {
-		status = backend.HealthStatusError
-		message = "randomized error"
+	if dsn == "" {
+		return &backend.CheckHealthResult{
+			Status:  backend.HealthStatusError,
+			Message: "No connection string found." + "Set the DATABRICKS_DSN environment variable, and try again.",
+		}, nil
 	}
 
+	//db, err := sql.Open("databricks", dsn)
+	//
+	//if err != nil {
+	//	return &backend.CheckHealthResult{
+	//		Status:  backend.HealthStatusError,
+	//		Message: fmt.Sprintf("SQL Connection Failed: %s", err),
+	//	}, nil
+	//}
+
+	rows, err := databricksDB.Query("SELECT 1")
+
+	if err != nil {
+		return &backend.CheckHealthResult{
+			Status:  backend.HealthStatusError,
+			Message: fmt.Sprintf("SQL Connection Failed: %s", err),
+		}, nil
+	}
+
+	defer rows.Close()
+
 	return &backend.CheckHealthResult{
-		Status:  status,
-		Message: message,
+		Status:  backend.HealthStatusOk,
+		Message: "Data source is working",
 	}, nil
 }
 

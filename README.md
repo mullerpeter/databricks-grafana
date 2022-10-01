@@ -1,7 +1,14 @@
 # Databricks Grafana Data Source Backend Plugin
 
-### WIP
 This Grafana Data Source Plugin allows direct queries to Databricks.
+
+## Query Editor
+
+![img.png](img/querry_editor.png)
+
+## Plugin Configuration
+
+![img_1.png](img/config_editor.png)
 
 ## What is Grafana Data Source Backend Plugin?
 

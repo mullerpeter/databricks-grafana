@@ -12,17 +12,6 @@ interface State {}
 export class ConfigEditor extends PureComponent<Props, State> {
 
   // Secure field (only sent to the backend)
-  onAPIKeyChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { onOptionsChange, options } = this.props;
-    onOptionsChange({
-      ...options,
-      secureJsonData: {
-        ...options.secureJsonData,
-        apiKey: event.target.value,
-      },
-    });
-  };
-
   onTokenChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { onOptionsChange, options } = this.props;
     onOptionsChange({
@@ -56,20 +45,18 @@ export class ConfigEditor extends PureComponent<Props, State> {
     });
   };
 
-  onResetAPIKey = () => {
+  onResetDBConfig = () => {
     const { onOptionsChange, options } = this.props;
     onOptionsChange({
       ...options,
       secureJsonFields: {
         ...options.secureJsonFields,
-        apiKey: false,
         hostname: false,
         path: false,
         token: false
       },
       secureJsonData: {
         ...options.secureJsonData,
-        apiKey: '',
         hostname: '',
         path: '',
         token: '',
@@ -84,40 +71,43 @@ export class ConfigEditor extends PureComponent<Props, State> {
 
     return (
       <div className="gf-form-group">
-        <div className="gf-form-inline">
-          <div className="gf-form">
-            <SecretFormField
-              isConfigured={(secureJsonFields && secureJsonFields.path) as boolean}
-              value={secureJsonData.path || ''}
-              label="Databricks HTTP Path"
-              placeholder="databricks://:<DB_ACCESS_TOKEN>@<DB_Server_Hostname>/<DB_HTTP_Path | (sql/proto...)>"
-              labelWidth={10}
-              inputWidth={300}
-              onReset={this.onResetAPIKey}
-              onChange={this.onPathChange}
-            />
-          </div>
+        <div className="gf-form--alt">
           <div className="gf-form">
             <SecretFormField
                 isConfigured={(secureJsonFields && secureJsonFields.hostname) as boolean}
                 value={secureJsonData.hostname || ''}
-                label="Databricks Hostname"
-                placeholder="databricks://:<DB_ACCESS_TOKEN>@<DB_Server_Hostname>/<DB_HTTP_Path | (sql/proto...)>"
+                label="Server Hostname"
+                placeholder="XXX.cloud.databricks.com"
+                tooltip="Databricks Server Hostname (without http)"
                 labelWidth={10}
-                inputWidth={300}
-                onReset={this.onResetAPIKey}
+                inputWidth={500}
+                onReset={this.onResetDBConfig}
                 onChange={this.onHostnameChange}
+            />
+          </div>
+          <div className="gf-form">
+            <SecretFormField
+              isConfigured={(secureJsonFields && secureJsonFields.path) as boolean}
+              value={secureJsonData.path || ''}
+              label="HTTP Path"
+              placeholder="sql/1.0/endpoints/XXX"
+              tooltip="HTTP Path value for the existing cluster or SQL warehouse."
+              labelWidth={10}
+              inputWidth={500}
+              onReset={this.onResetDBConfig}
+              onChange={this.onPathChange}
             />
           </div>
           <div className="gf-form">
             <SecretFormField
                 isConfigured={(secureJsonFields && secureJsonFields.token) as boolean}
                 value={secureJsonData.token || ''}
-                label="Databricks Access Token"
-                placeholder="databricks://:<DB_ACCESS_TOKEN>@<DB_Server_Hostname>/<DB_HTTP_Path | (sql/proto...)>"
+                label="Access Token"
+                placeholder="dapi1ab2c34defabc567890123d4efa56789"
+                tooltip="Databricks Personal Access Token"
                 labelWidth={10}
-                inputWidth={300}
-                onReset={this.onResetAPIKey}
+                inputWidth={500}
+                onReset={this.onResetDBConfig}
                 onChange={this.onTokenChange}
             />
           </div>

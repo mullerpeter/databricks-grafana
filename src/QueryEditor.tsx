@@ -1,92 +1,91 @@
 import { defaults } from 'lodash';
 
-import React, { ChangeEvent, PureComponent } from 'react';
-import { LegacyForms } from '@grafana/ui';
+import React, { PureComponent, FormEvent } from 'react';
+import { AutoSizeInput, InlineFieldRow, InlineField } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
 import { DataSource } from './datasource';
 import { defaultQuery, MyDataSourceOptions, MyQuery } from './types';
-
-const { FormField } = LegacyForms;
 
 type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
 export class QueryEditor extends PureComponent<Props> {
 
-  ontableNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+  ontableNameChange = (event: FormEvent<HTMLInputElement>) => {
+      console.log(event);
     const { onChange, query } = this.props;
-    onChange({ ...query, tableName: event.target.value });
+    onChange({ ...query, tableName: event.currentTarget.value });
   };
 
 
-  ontimeColumnNameTextChange = (event: ChangeEvent<HTMLInputElement>) => {
+  ontimeColumnNameTextChange = (event: FormEvent<HTMLInputElement>) => {
+      console.log(event);
     const { onChange, query } = this.props;
-    onChange({ ...query, timeColumnName: event.target.value });
+    onChange({ ...query, timeColumnName: event.currentTarget.value });
   };
 
 
-  onvalueColumnNameChange = (event: ChangeEvent<HTMLInputElement>) => {
+  onvalueColumnNameChange = (event: FormEvent<HTMLInputElement>) => {
+      console.log(event);
     const { onChange, query } = this.props;
-    onChange({ ...query, valueColumnName: event.target.value });
+    onChange({ ...query, valueColumnName: event.currentTarget.value });
   };
 
 
-  onwhereQueryChange = (event: ChangeEvent<HTMLInputElement>) => {
+  onwhereQueryChange = (event: FormEvent<HTMLInputElement>) => {
+      console.log(event);
     const { onChange, query } = this.props;
-    onChange({ ...query, whereQuery: event.target.value });
+    onChange({ ...query, whereQuery: event.currentTarget.value });
   };
-
-
-  onConstantChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { onChange, query, onRunQuery } = this.props;
-    onChange({ ...query, limit: parseInt(event.target.value, 10) });
-    // executes the query
-    onRunQuery();
-  };
-
-
 
   render() {
     const query = defaults(this.props.query, defaultQuery);
-    const { limit, timeColumnName, valueColumnName, whereQuery, tableName } = query;
+    const { timeColumnName, valueColumnName, whereQuery, tableName } = query;
 
     return (
       <div className="gf-form" style={{ flexDirection: "column", rowGap: "8px"}}>
-        <FormField
-          width={4}
-          value={limit}
-          onChange={this.onConstantChange}
-          label="Limit"
-          type="number"
-          step="1"
-        />
-        <FormField
-          labelWidth={8}
-          value={timeColumnName || ''}
-          onChange={this.ontimeColumnNameTextChange}
-          label="Time Column"
-          inputWidth={500}
-        />
-        <FormField
-            labelWidth={8}
-            value={valueColumnName || ''}
-            onChange={this.onvalueColumnNameChange}
-            label="Value Column"
-            inputWidth={500}
-        />
-        <FormField
-            labelWidth={8}
-            value={whereQuery || ''}
-            onChange={this.onwhereQueryChange}
-            label="Where SQL"
-            inputWidth={500}
-        />
-        <FormField
-            labelWidth={8}
-            value={tableName || ''}
-            onChange={this.ontableNameChange}
-            label="Table Name"
-            inputWidth={500}
-        />
+          <InlineFieldRow>
+              <InlineField label="Time Column" labelWidth={16}>
+                  <AutoSizeInput
+                      value={timeColumnName || ''}
+                      onCommitChange={this.ontimeColumnNameTextChange}
+                      minWidth={32}
+                      defaultValue="timestamp"
+                      required
+                  />
+              </InlineField>
+          </InlineFieldRow>
+          <InlineFieldRow>
+              <InlineField label="Value Column" labelWidth={16}>
+                  <AutoSizeInput
+                      value={valueColumnName || ''}
+                      onCommitChange={this.onvalueColumnNameChange}
+                      minWidth={32}
+                      defaultValue="value"
+                      required
+                  />
+              </InlineField>
+          </InlineFieldRow>
+          <InlineFieldRow>
+              <InlineField label="Table Name" labelWidth={16} tooltip="Schema and Table Name in the format <schema>.<table_name>">
+                  <AutoSizeInput
+                      value={tableName || ''}
+                      onCommitChange={this.ontableNameChange}
+                      minWidth={32}
+                      placeholder="default.table_name"
+                      required
+                  />
+              </InlineField>
+          </InlineFieldRow>
+          <InlineFieldRow>
+              <InlineField label="Where SQL" labelWidth={16}>
+                  <AutoSizeInput
+                      value={whereQuery || ''}
+                      onCommitChange={this.onwhereQueryChange}
+                      minWidth={32}
+                      placeholder="id = 1 AND name = 'Peter'"
+                  />
+              </InlineField>
+          </InlineFieldRow>
       </div>
     );
   }
