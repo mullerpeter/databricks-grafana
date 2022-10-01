@@ -1,6 +1,6 @@
 {
   "name": "climeworks-databricks",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Databricks SQL Connector",
   "scripts": {
     "build": "grafana-toolkit plugin:build",
