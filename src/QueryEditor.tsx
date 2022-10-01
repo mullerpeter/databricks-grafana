@@ -44,7 +44,7 @@ export class QueryEditor extends PureComponent<Props> {
     return (
       <div className="gf-form" style={{ flexDirection: "column", rowGap: "8px"}}>
           <InlineFieldRow>
-              <InlineField label="Time Column" labelWidth={16}>
+              <InlineField label="Time Column" labelWidth={16} tooltip="The column name of the time column">
                   <AutoSizeInput
                       value={timeColumnName || ''}
                       onCommitChange={this.ontimeColumnNameTextChange}
@@ -55,7 +55,7 @@ export class QueryEditor extends PureComponent<Props> {
               </InlineField>
           </InlineFieldRow>
           <InlineFieldRow>
-              <InlineField label="Value Column" labelWidth={16}>
+              <InlineField label="Value Column" labelWidth={16} tooltip="The column name of the value to query">
                   <AutoSizeInput
                       value={valueColumnName || ''}
                       onCommitChange={this.onvalueColumnNameChange}
@@ -77,7 +77,7 @@ export class QueryEditor extends PureComponent<Props> {
               </InlineField>
           </InlineFieldRow>
           <InlineFieldRow>
-              <InlineField label="Where SQL" labelWidth={16}>
+              <InlineField label="Where SQL" labelWidth={16} tooltip="Additional WHERE conditions to filter the queried data (Databricks SQL)">
                   <AutoSizeInput
                       value={whereQuery || ''}
                       onCommitChange={this.onwhereQueryChange}
