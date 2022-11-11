@@ -7,9 +7,9 @@ Grafana Databricks integration allowing direct connection to Databricks to query
 The plugin is still work in progress and currently only offers limited functionality.
 
 #### TODO:
+- [x] Full-text query editor
 - [ ] Add GROUP BY to query form
 - [ ] Allow multiple metrics query
-- [ ] Full-text query editor
 - [ ] Autocomplete
 - [ ] ...
 
@@ -28,7 +28,11 @@ allow_loading_unsigned_plugins = mullerpeter-databricks-datasource
 
 ![img.png](img/querry_editor.png)
 
-At the moment only simple queries for one value over time are implemented. The Time-range and TimeBucket parameters from Grafana are automatically inserted into the query.
+At the moment only simple queries for one value over time are implemented. The Time-range and TimeBucket parameters from Grafana are automatically inserted into the query. 
+
+![img.png](img/full_text_sql_editor.png)
+
+When using the raw SQL editor, template variables are replaced by the Time-Range and Bucket (see default query in editor for example).
 
 ## Plugin Configuration
 

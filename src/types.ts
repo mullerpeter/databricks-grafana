@@ -6,12 +6,16 @@ export interface MyQuery extends DataQuery {
   whereQuery?: string;
   tableName: string;
   withStreaming: boolean;
+  rawSqlQuery?: string;
+  rawSqlSelected: boolean;
 }
 
 export const defaultQuery: Partial<MyQuery> = {
   timeColumnName: "timestamp",
   valueColumnName: "value",
   withStreaming: false,
+  rawSqlSelected: false,
+  rawSqlQuery: "SELECT $__time(time_column), $__value(value_column) FROM catalog.default.table_name WHERE $__timeFilter(time_column) GROUP BY $__timeWindow(time_column)"
 };
 
 /**

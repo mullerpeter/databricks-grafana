@@ -6,13 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	_ "github.com/databricks/databricks-sql-go"
-	"time"
-
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/grafana/grafana-plugin-sdk-go/live"
+	"regexp"
+	"time"
 )
 
 // Make sure SampleDatasource implements required interfaces. This is important to do
@@ -89,6 +89,8 @@ type queryModel struct {
 	ValueColumnName string `json:"valueColumnName"`
 	WhereQuery      string `json:"whereQuery"`
 	TableName       string `json:"tableName"`
+	RawSqlQuery     string `json:"rawSqlQuery"`
+	RawSqlSelected  bool   `json:"rawSqlSelected"`
 }
 
 func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, query backend.DataQuery) backend.DataResponse {
@@ -109,20 +111,76 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 	if seconds_interval <= 0 {
 		seconds_interval = 1
 	}
+	queryString := ""
+	if qm.RawSqlSelected {
+		queryString = qm.RawSqlQuery
+		log.DefaultLogger.Info("Raw SQL Query selected", "query", queryString)
 
-	whereQuery := ""
-	if qm.WhereQuery != "" {
-		whereQuery = fmt.Sprintf(" %s AND", qm.WhereQuery)
+		var rgx = regexp.MustCompile(`\$__timeWindow\(([a-zA-Z0-9_-]+)\)`)
+		if rgx.MatchString(queryString) {
+			log.DefaultLogger.Info("__timeWindow placeholder found")
+			rs := rgx.FindStringSubmatch(queryString)
+			timeColumnName := rs[1]
+			queryString = rgx.ReplaceAllString(queryString, fmt.Sprintf("window(%s, '%d SECONDS')", timeColumnName, seconds_interval))
+
+			rgx = regexp.MustCompile(`\$__time\(([a-zA-Z0-9_-]+)\)`)
+			if rgx.MatchString(queryString) {
+				log.DefaultLogger.Info("__time placeholder found")
+				queryString = rgx.ReplaceAllString(queryString, "window.start")
+			}
+
+			rgx = regexp.MustCompile(`\$__value\(([a-zA-Z0-9_-]+)\)`)
+			if rgx.MatchString(queryString) {
+				log.DefaultLogger.Info("__value placeholder found")
+				rs = rgx.FindStringSubmatch(queryString)
+				valueColumnName := rs[1]
+				queryString = rgx.ReplaceAllString(queryString, fmt.Sprintf("avg(%s) AS value", valueColumnName))
+			}
+		} else {
+			rgx = regexp.MustCompile(`\$__time\(([a-zA-Z0-9_-]+)\)`)
+			if rgx.MatchString(queryString) {
+				log.DefaultLogger.Info("__time placeholder found")
+				rs := rgx.FindStringSubmatch(queryString)
+				timeColumnName := rs[1]
+				queryString = rgx.ReplaceAllString(queryString, fmt.Sprintf("%s AS time", timeColumnName))
+			}
+
+			rgx = regexp.MustCompile(`\$__value\(([a-zA-Z0-9_-]+)\)`)
+			if rgx.MatchString(queryString) {
+				log.DefaultLogger.Info("__value placeholder found")
+				rs := rgx.FindStringSubmatch(queryString)
+				valueColumnName := rs[1]
+				queryString = rgx.ReplaceAllString(queryString, fmt.Sprintf("%s AS value", valueColumnName))
+			}
+		}
+
+		rgx = regexp.MustCompile(`\$__timeFilter\(([a-zA-Z0-9_-]+)\)`)
+		if rgx.MatchString(queryString) {
+			rs := rgx.FindStringSubmatch(queryString)
+			timeColumnName := rs[1]
+			timeRangeFilter := fmt.Sprintf("%s BETWEEN '%s' AND '%s'",
+				timeColumnName,
+				query.TimeRange.From.UTC().Format("2006-01-02 15:04:05"),
+				query.TimeRange.To.UTC().Format("2006-01-02 15:04:05"),
+			)
+			queryString = rgx.ReplaceAllString(queryString, timeRangeFilter)
+		}
+
+	} else {
+		whereQuery := ""
+		if qm.WhereQuery != "" {
+			whereQuery = fmt.Sprintf(" %s AND", qm.WhereQuery)
+		}
+		queryString = fmt.Sprintf("SELECT window.start, avg(%s) AS value FROM %s WHERE%s %s BETWEEN '%s' AND '%s' GROUP BY window(%s, '%d SECONDS')",
+			qm.ValueColumnName,
+			qm.TableName,
+			whereQuery,
+			qm.TimeColumnName,
+			query.TimeRange.From.UTC().Format("2006-01-02 15:04:05"),
+			query.TimeRange.To.UTC().Format("2006-01-02 15:04:05"),
+			qm.TimeColumnName,
+			seconds_interval)
 	}
-	queryString := fmt.Sprintf("SELECT window.start, avg(%s) AS value FROM %s WHERE%s %s BETWEEN '%s' AND '%s' GROUP BY window(%s, '%d SECONDS')",
-		qm.ValueColumnName,
-		qm.TableName,
-		whereQuery,
-		qm.TimeColumnName,
-		query.TimeRange.From.UTC().Format("2006-01-02 15:04:05"),
-		query.TimeRange.To.UTC().Format("2006-01-02 15:04:05"),
-		qm.TimeColumnName,
-		seconds_interval)
 	log.DefaultLogger.Info("Query", "query", queryString)
 
 	rows, err := databricksDB.Query(queryString)
