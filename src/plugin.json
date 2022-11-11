@@ -1,0 +1,41 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "datasource",
+  "name": "Databricks Community Datasource",
+  "id": "mullerpeter-databricks-datasource",
+  "metrics": true,
+  "backend": true,
+  "executable": "gpx_databricks",
+  "info": {
+    "description": "Databricks SQL Connector",
+    "author": {
+      "name": "Peter Müller",
+      "url": "https://github.com/mullerpeter/databricks-grafana"
+    },
+    "keywords": [
+      "databricks",
+      "sql"
+    ],
+    "logos": {
+      "small": "img/databricks_logo.png",
+      "large": "img/databricks_logo.png"
+    },
+    "links": [
+      {
+        "name": "Website",
+        "url": "https://github.com/mullerpeter/databricks-grafana"
+      },
+      {
+        "name": "License",
+        "url": "https://github.com/mullerpeter/databricks-grafana/blob/master/LICENSE"
+      }
+    ],
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": {
+    "grafanaDependency": ">=7.0.0",
+    "plugins": []
+  }
+}
