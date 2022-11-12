@@ -1,29 +1,26 @@
 import { defaults } from 'lodash';
 
-import React, {FormEvent, useState} from 'react';
-import { AutoSizeInput, InlineFieldRow, InlineField, useTheme, InlineSwitch } from '@grafana/ui';
+import React, {FormEvent } from 'react';
+import { AutoSizeInput, InlineFieldRow, InlineField, InlineSwitch, CodeEditor } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
 import { DataSource } from './datasource';
-import Editor from "@monaco-editor/react";
 import { defaultQuery, MyDataSourceOptions, MyQuery } from './types';
-import * as monaco from "monaco-editor";
 
 type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
 export function QueryEditor(props: Props) {
 
-    const [, setQueryText] = useState("")
-    const [sqlEditorSelected, setSqlEditorSelected] = useState(false)
-    const onQuerryChange = (value: string | undefined, ev: monaco.editor.IModelContentChangedEvent) => {
-        setQueryText(value || "")
+    const query = defaults(props.query, defaultQuery);
+    const { timeColumnName, valueColumnName, whereQuery, tableName, rawSqlQuery, rawSqlSelected } = query;
+
+    const onSQLQueryChange = (value: string) => {
         const { onChange, query } = props;
         onChange({ ...query, rawSqlQuery: value });
     };
 
     const onSQLSwitchChange = (event: any) => {
         const { onChange, query } = props;
-        onChange({ ...query, rawSqlSelected: !sqlEditorSelected });
-        setSqlEditorSelected(!sqlEditorSelected);
+        onChange({ ...query, rawSqlSelected: !rawSqlSelected });
     };
   const ontableNameChange = (event: FormEvent<HTMLInputElement>) => {
       console.log(event);
@@ -52,19 +49,22 @@ export function QueryEditor(props: Props) {
     onChange({ ...query, whereQuery: event.currentTarget.value });
   };
 
-    const query = defaults(props.query, defaultQuery);
-    const { timeColumnName, valueColumnName, whereQuery, tableName } = query;
-    const theme = useTheme()
+
     return (
       <div className="gf-form" style={{ flexDirection: "column", rowGap: "8px"}}>
-          {sqlEditorSelected ? (
-              <Editor
+          {rawSqlSelected ? (
+              <div className="code-wrapper" style={{ width: "100%" }}>
+                  <CodeEditor
+                  value={rawSqlQuery || ""}
+                  language="sql"
                   height="200px"
-                  theme={theme.isDark ? "vs-dark" : "vs-light"}
-                  defaultLanguage="sql"
-                  defaultValue="SELECT $__time(time_column), $__value(value_column) FROM catalog.default.table_name WHERE $__timeFilter(time_column) GROUP BY $__timeWindow(time_column)"
-                  onChange={onQuerryChange}
-              />
+                  width="100%"
+                  onBlur={onSQLQueryChange}
+                  onSave={onSQLQueryChange}
+                  showMiniMap={false}
+                  showLineNumbers={false}
+                  />
+              </div>
           ) : (
               <>
                   <InlineFieldRow>
@@ -115,7 +115,7 @@ export function QueryEditor(props: Props) {
           <InlineFieldRow>
               <InlineField label="SQL Editor" labelWidth={16}>
                   <InlineSwitch
-                      value={sqlEditorSelected}
+                      value={rawSqlSelected}
                       onChange={onSQLSwitchChange}
                   />
               </InlineField>

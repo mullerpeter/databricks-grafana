@@ -11,7 +11,9 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/grafana/grafana-plugin-sdk-go/live"
+	"math"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -93,12 +95,107 @@ type queryModel struct {
 	RawSqlSelected  bool   `json:"rawSqlSelected"`
 }
 
+func getIntervalString(duration time.Duration) string {
+	hours := int(math.Floor(duration.Hours()))
+	minutes := int(math.Floor(duration.Minutes()))
+	seconds := int(math.Floor(duration.Seconds()))
+
+	returnString := ""
+
+	deliminator := ""
+	if hours > 0 {
+		returnString = fmt.Sprintf("%s%s%d HOURS", returnString, deliminator, hours)
+		deliminator = " "
+	}
+
+	remainingMinutes := minutes - (hours * 60)
+	if remainingMinutes > 0 {
+		returnString = fmt.Sprintf("%s%s%d MINUTES", returnString, deliminator, remainingMinutes)
+		deliminator = " "
+	}
+
+	remainingSeconds := seconds - (minutes * 60)
+	if remainingSeconds > 0 {
+		returnString = fmt.Sprintf("%s%s%d SECONDS", returnString, deliminator, remainingSeconds)
+		deliminator = " "
+	}
+
+	return returnString
+}
+
+func replaceMacros(sqlQuery string, query backend.DataQuery) string {
+
+	queryString := sqlQuery
+	log.DefaultLogger.Info("Raw SQL Query selected", "query", queryString)
+
+	interval_string := getIntervalString(query.Interval)
+
+	var rgx = regexp.MustCompile(`\$__timeWindow\(([a-zA-Z0-9_-]+)\)`)
+	if rgx.MatchString(queryString) {
+		log.DefaultLogger.Info("__timeWindow placeholder found")
+		rs := rgx.FindStringSubmatch(queryString)
+		timeColumnName := rs[1]
+		queryString = rgx.ReplaceAllString(queryString, fmt.Sprintf("window(%s, '%s')", timeColumnName, interval_string))
+
+		rgx = regexp.MustCompile(`\$__time\(([a-zA-Z0-9_-]+)\)`)
+		if rgx.MatchString(queryString) {
+			log.DefaultLogger.Info("__time placeholder found")
+			queryString = rgx.ReplaceAllString(queryString, "window.start")
+		}
+
+		rgx = regexp.MustCompile(`\$__value\(([a-zA-Z0-9_-]+)\)`)
+		if rgx.MatchString(queryString) {
+			log.DefaultLogger.Info("__value placeholder found")
+			rs = rgx.FindStringSubmatch(queryString)
+			valueColumnName := rs[1]
+			queryString = rgx.ReplaceAllString(queryString, fmt.Sprintf("avg(%s) AS value", valueColumnName))
+		}
+	} else {
+		rgx = regexp.MustCompile(`\$__time\(([a-zA-Z0-9_-]+)\)`)
+		if rgx.MatchString(queryString) {
+			log.DefaultLogger.Info("__time placeholder found")
+			rs := rgx.FindStringSubmatch(queryString)
+			timeColumnName := rs[1]
+			queryString = rgx.ReplaceAllString(queryString, fmt.Sprintf("%s AS time", timeColumnName))
+		}
+
+		rgx = regexp.MustCompile(`\$__value\(([a-zA-Z0-9_-]+)\)`)
+		if rgx.MatchString(queryString) {
+			log.DefaultLogger.Info("__value placeholder found")
+			rs := rgx.FindStringSubmatch(queryString)
+			valueColumnName := rs[1]
+			queryString = rgx.ReplaceAllString(queryString, fmt.Sprintf("%s AS value", valueColumnName))
+		}
+	}
+
+	rgx = regexp.MustCompile(`\$__timeFilter\(([a-zA-Z0-9_-]+)\)`)
+	if rgx.MatchString(queryString) {
+		rs := rgx.FindStringSubmatch(queryString)
+		timeColumnName := rs[1]
+		timeRangeFilter := fmt.Sprintf("%s BETWEEN '%s' AND '%s'",
+			timeColumnName,
+			query.TimeRange.From.UTC().Format("2006-01-02 15:04:05"),
+			query.TimeRange.To.UTC().Format("2006-01-02 15:04:05"),
+		)
+		queryString = rgx.ReplaceAllString(queryString, timeRangeFilter)
+	}
+
+	queryString = strings.ReplaceAll(queryString, "$__timeFrom", query.TimeRange.From.UTC().Format("2006-01-02 15:04:05"))
+
+	queryString = strings.ReplaceAll(queryString, "$__timeTo", query.TimeRange.To.UTC().Format("2006-01-02 15:04:05"))
+
+	queryString = strings.ReplaceAll(queryString, "$__interval", interval_string)
+
+	return queryString
+}
+
 func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, query backend.DataQuery) backend.DataResponse {
 	response := backend.DataResponse{}
 
 	// Unmarshal the JSON into our queryModel.
 	var qm queryModel
 
+	log.DefaultLogger.Info("Query Ful", "query", query)
 	err := json.Unmarshal(query.JSON, &qm)
 	if err != nil {
 		response.Error = err
@@ -111,67 +208,16 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 	if seconds_interval <= 0 {
 		seconds_interval = 1
 	}
+	interval_string := getIntervalString(query.Interval)
 	queryString := ""
 	if qm.RawSqlSelected {
-		queryString = qm.RawSqlQuery
-		log.DefaultLogger.Info("Raw SQL Query selected", "query", queryString)
-
-		var rgx = regexp.MustCompile(`\$__timeWindow\(([a-zA-Z0-9_-]+)\)`)
-		if rgx.MatchString(queryString) {
-			log.DefaultLogger.Info("__timeWindow placeholder found")
-			rs := rgx.FindStringSubmatch(queryString)
-			timeColumnName := rs[1]
-			queryString = rgx.ReplaceAllString(queryString, fmt.Sprintf("window(%s, '%d SECONDS')", timeColumnName, seconds_interval))
-
-			rgx = regexp.MustCompile(`\$__time\(([a-zA-Z0-9_-]+)\)`)
-			if rgx.MatchString(queryString) {
-				log.DefaultLogger.Info("__time placeholder found")
-				queryString = rgx.ReplaceAllString(queryString, "window.start")
-			}
-
-			rgx = regexp.MustCompile(`\$__value\(([a-zA-Z0-9_-]+)\)`)
-			if rgx.MatchString(queryString) {
-				log.DefaultLogger.Info("__value placeholder found")
-				rs = rgx.FindStringSubmatch(queryString)
-				valueColumnName := rs[1]
-				queryString = rgx.ReplaceAllString(queryString, fmt.Sprintf("avg(%s) AS value", valueColumnName))
-			}
-		} else {
-			rgx = regexp.MustCompile(`\$__time\(([a-zA-Z0-9_-]+)\)`)
-			if rgx.MatchString(queryString) {
-				log.DefaultLogger.Info("__time placeholder found")
-				rs := rgx.FindStringSubmatch(queryString)
-				timeColumnName := rs[1]
-				queryString = rgx.ReplaceAllString(queryString, fmt.Sprintf("%s AS time", timeColumnName))
-			}
-
-			rgx = regexp.MustCompile(`\$__value\(([a-zA-Z0-9_-]+)\)`)
-			if rgx.MatchString(queryString) {
-				log.DefaultLogger.Info("__value placeholder found")
-				rs := rgx.FindStringSubmatch(queryString)
-				valueColumnName := rs[1]
-				queryString = rgx.ReplaceAllString(queryString, fmt.Sprintf("%s AS value", valueColumnName))
-			}
-		}
-
-		rgx = regexp.MustCompile(`\$__timeFilter\(([a-zA-Z0-9_-]+)\)`)
-		if rgx.MatchString(queryString) {
-			rs := rgx.FindStringSubmatch(queryString)
-			timeColumnName := rs[1]
-			timeRangeFilter := fmt.Sprintf("%s BETWEEN '%s' AND '%s'",
-				timeColumnName,
-				query.TimeRange.From.UTC().Format("2006-01-02 15:04:05"),
-				query.TimeRange.To.UTC().Format("2006-01-02 15:04:05"),
-			)
-			queryString = rgx.ReplaceAllString(queryString, timeRangeFilter)
-		}
-
+		queryString = replaceMacros(qm.RawSqlQuery, query)
 	} else {
 		whereQuery := ""
 		if qm.WhereQuery != "" {
 			whereQuery = fmt.Sprintf(" %s AND", qm.WhereQuery)
 		}
-		queryString = fmt.Sprintf("SELECT window.start, avg(%s) AS value FROM %s WHERE%s %s BETWEEN '%s' AND '%s' GROUP BY window(%s, '%d SECONDS')",
+		queryString = fmt.Sprintf("SELECT window.start, avg(%s) AS value FROM %s WHERE%s %s BETWEEN '%s' AND '%s' GROUP BY window(%s, '%s')",
 			qm.ValueColumnName,
 			qm.TableName,
 			whereQuery,
@@ -179,7 +225,7 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 			query.TimeRange.From.UTC().Format("2006-01-02 15:04:05"),
 			query.TimeRange.To.UTC().Format("2006-01-02 15:04:05"),
 			qm.TimeColumnName,
-			seconds_interval)
+			interval_string)
 	}
 	log.DefaultLogger.Info("Query", "query", queryString)
 
