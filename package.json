@@ -1,6 +1,7 @@
 {
-  "name": "climeworks-databricks",
-  "version": "0.0.5",
+  "name": "mullerpeter-databricks-datasource",
+  "private": true,
+  "version": "0.0.6",
   "description": "Databricks SQL Connector",
   "scripts": {
     "build": "grafana-toolkit plugin:build",
@@ -24,8 +25,5 @@
   },
   "engines": {
     "node": ">=14"
-  },
-  "dependencies": {
-    "@monaco-editor/react": "^4.4.6"
   }
 }

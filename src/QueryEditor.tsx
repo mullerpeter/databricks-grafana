@@ -71,9 +71,10 @@ export function QueryEditor(props: Props) {
                       <InlineField label="Time Column" labelWidth={16} tooltip="The column name of the time column">
                           <AutoSizeInput
                               value={timeColumnName || ''}
+                              defaultValue={timeColumnName || ''}
                               onCommitChange={ontimeColumnNameTextChange}
                               minWidth={32}
-                              defaultValue="timestamp"
+                              placeholder="timestamp"
                               required
                           />
                       </InlineField>
@@ -82,9 +83,10 @@ export function QueryEditor(props: Props) {
                       <InlineField label="Value Column" labelWidth={16} tooltip="The column name of the value to query">
                           <AutoSizeInput
                               value={valueColumnName || ''}
+                              defaultValue={valueColumnName || ''}
                               onCommitChange={onvalueColumnNameChange}
                               minWidth={32}
-                              defaultValue="value"
+                              placeholder="value"
                               required
                           />
                       </InlineField>
@@ -93,6 +95,7 @@ export function QueryEditor(props: Props) {
                       <InlineField label="Table Name" labelWidth={16} tooltip="(Catalog), Schema and Table Name in the format (<catalog>).<schema>.<table_name>">
                           <AutoSizeInput
                               value={tableName || ''}
+                              defaultValue={tableName || ''}
                               onCommitChange={ontableNameChange}
                               minWidth={32}
                               placeholder="catalog.default.table_name"
@@ -104,6 +107,7 @@ export function QueryEditor(props: Props) {
                       <InlineField label="Where SQL" labelWidth={16} tooltip="Additional WHERE conditions to filter the queried data (Databricks SQL)">
                           <AutoSizeInput
                               value={whereQuery || ''}
+                              defaultValue={whereQuery || ''}
                               onCommitChange={onwhereQueryChange}
                               minWidth={32}
                               placeholder="id = 1 AND name = 'Peter'"

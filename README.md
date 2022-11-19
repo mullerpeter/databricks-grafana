@@ -8,14 +8,14 @@ The plugin is still work in progress and currently only offers limited functiona
 
 #### TODO:
 - [x] Full-text query editor
+- [x] Allow multiple metrics query
 - [ ] Add GROUP BY to query form
-- [ ] Allow multiple metrics query
 - [ ] Autocomplete
 - [ ] ...
 
 ### Signing
 
-The build plugin in the release section of this repo is signed for `localhost:3000`. If you want to use it on another domain, you either have build it without signing and add the plugin ID to the `allow_loading_unsigned_plugins` in the grafana config or sign it yourself according to the [Grafana Documentation](https://grafana.com/docs/grafana/latest/developers/plugins/sign-a-plugin/).
+The build plugin in the release section of this repo is signed for `localhost:3000`. If you want to use it on another domain, you either have build it without signing (or simply delete the `MANIFEST.txt`) and add the plugin ID to the `allow_loading_unsigned_plugins` in the grafana config or sign it yourself according to the [Grafana Documentation](https://grafana.com/docs/grafana/latest/developers/plugins/sign-a-plugin/).
 
 defaults.ini
 ```
@@ -24,15 +24,16 @@ defaults.ini
 allow_loading_unsigned_plugins = mullerpeter-databricks-datasource
 ```
 
-## Query Editor
+## Simple Query Editor
 
 ![img.png](img/querry_editor.png)
 
-At the moment only simple queries for one value over time are implemented. The Time-range and TimeBucket parameters from Grafana are automatically inserted into the query. 
+At the moment only simple queries for one value over time are implemented. The Time-range and TimeBucket parameters from Grafana are automatically inserted into the query. If you want to use more advanced queries use the raw SQL editor.
 
+## Raw SQL Editor
 ![img.png](img/full_text_sql_editor.png)
 
-When using the raw SQL editor, template variables are replaced by the Time-Range and Bucket (see default query in editor for example).
+When using the raw SQL editor, template variables are replaced by the Time-Range and Bucket (see query help in editor for examples).
 
 ## Plugin Configuration
 
