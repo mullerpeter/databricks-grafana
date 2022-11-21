@@ -1,7 +1,7 @@
 {
   "name": "mullerpeter-databricks-datasource",
   "private": true,
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Databricks SQL Connector",
   "scripts": {
     "build": "grafana-toolkit plugin:build",
