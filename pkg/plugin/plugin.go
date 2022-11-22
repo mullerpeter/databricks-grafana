@@ -29,7 +29,6 @@ var (
 	_                           backend.StreamHandler         = (*SampleDatasource)(nil)
 	_                           instancemgmt.InstanceDisposer = (*SampleDatasource)(nil)
 	databricksConnectionsString string
-	databricksDB                *sql.DB
 )
 
 // NewSampleDatasource creates a new datasource instance.
@@ -38,11 +37,9 @@ func NewSampleDatasource(settings backend.DataSourceInstanceSettings) (instancem
 	if databricksConnectionsString != "" {
 		log.DefaultLogger.Info("Init Databricks SQL DB")
 		db, err := sql.Open("databricks", databricksConnectionsString)
+		defer db.Close()
 		if err != nil {
 			log.DefaultLogger.Info("DB Init Error", "err", err)
-		} else {
-			databricksDB = db
-			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 		}
 	}
 
@@ -115,6 +112,13 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 	log.DefaultLogger.Info("Query", "query", queryString)
 
 	frame := data.NewFrame("response")
+	databricksDB, err := sql.Open("databricks", databricksConnectionsString)
+	defer databricksDB.Close()
+	if err != nil {
+		response.Error = err
+		log.DefaultLogger.Info("DB Init Error", "err", err)
+		return response
+	}
 
 	db := sqlx.NewDb(databricksDB, "postgres")
 
@@ -176,7 +180,16 @@ func (d *SampleDatasource) CheckHealth(_ context.Context, req *backend.CheckHeal
 			Message: "No connection string found." + "Set the DATABRICKS_DSN environment variable, and try again.",
 		}, nil
 	}
+	databricksDB, err := sql.Open("databricks", databricksConnectionsString)
+	defer databricksDB.Close()
 
+	if err != nil {
+		return &backend.CheckHealthResult{
+			Status:  backend.HealthStatusError,
+			Message: "Database Connection failed." + err.Error(),
+		}, nil
+
+	}
 	rows, err := databricksDB.Query("SELECT 1")
 
 	if err != nil {

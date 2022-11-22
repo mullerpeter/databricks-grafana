@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.0.7
+## 0.0.8
+
+- Adds temp fix for Invalid SessionHandle 
+
+### 0.0.7
 
 - Adds support for custom variables in SQL editor
 
