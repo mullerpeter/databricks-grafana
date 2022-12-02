@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	_ "github.com/databricks/databricks-sql-go"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
@@ -11,6 +12,7 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/jmoiron/sqlx"
+	"strings"
 	"time"
 )
 
@@ -29,6 +31,7 @@ var (
 	_                           backend.StreamHandler         = (*SampleDatasource)(nil)
 	_                           instancemgmt.InstanceDisposer = (*SampleDatasource)(nil)
 	databricksConnectionsString string
+	databricksDB                *sqlx.DB
 )
 
 // NewSampleDatasource creates a new datasource instance.
@@ -37,13 +40,52 @@ func NewSampleDatasource(settings backend.DataSourceInstanceSettings) (instancem
 	if databricksConnectionsString != "" {
 		log.DefaultLogger.Info("Init Databricks SQL DB")
 		db, err := sql.Open("databricks", databricksConnectionsString)
-		defer db.Close()
 		if err != nil {
 			log.DefaultLogger.Info("DB Init Error", "err", err)
+		} else {
+			databricksDB = sqlx.NewDb(db, "databricks")
+			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 		}
 	}
 
 	return &SampleDatasource{}, nil
+}
+
+func RefreshDBConnection() error {
+	if databricksConnectionsString != "" {
+		log.DefaultLogger.Info("Refreshing Databricks SQL DB Connection")
+		db, err := sql.Open("databricks", databricksConnectionsString)
+		if err != nil {
+			log.DefaultLogger.Info("DB Init Error", "err", err)
+			return err
+		} else {
+			databricksDB = sqlx.NewDb(db, "databricks")
+			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
+			return nil
+		}
+	}
+
+	return errors.New("no connection string set")
+}
+
+func ExecuteQueryx(queryString string) (*sqlx.Rows, error) {
+	rows, err := databricksDB.Queryx(queryString)
+	if err != nil {
+		if strings.HasPrefix(err.Error(), "Invalid SessionHandle") {
+			err = RefreshDBConnection()
+			if err != nil {
+				return nil, err
+			}
+			rows, err = databricksDB.Queryx(queryString)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	return rows, nil
 }
 
 // SampleDatasource is an example datasource which can respond to data queries, reports
@@ -112,17 +154,8 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 	log.DefaultLogger.Info("Query", "query", queryString)
 
 	frame := data.NewFrame("response")
-	databricksDB, err := sql.Open("databricks", databricksConnectionsString)
-	defer databricksDB.Close()
-	if err != nil {
-		response.Error = err
-		log.DefaultLogger.Info("DB Init Error", "err", err)
-		return response
-	}
 
-	db := sqlx.NewDb(databricksDB, "postgres")
-
-	rows, err := db.Queryx(queryString)
+	rows, err := ExecuteQueryx(queryString)
 	if err != nil {
 		response.Error = err
 		log.DefaultLogger.Info("Error", "err", err)
@@ -180,17 +213,8 @@ func (d *SampleDatasource) CheckHealth(_ context.Context, req *backend.CheckHeal
 			Message: "No connection string found." + "Set the DATABRICKS_DSN environment variable, and try again.",
 		}, nil
 	}
-	databricksDB, err := sql.Open("databricks", databricksConnectionsString)
-	defer databricksDB.Close()
 
-	if err != nil {
-		return &backend.CheckHealthResult{
-			Status:  backend.HealthStatusError,
-			Message: "Database Connection failed." + err.Error(),
-		}, nil
-
-	}
-	rows, err := databricksDB.Query("SELECT 1")
+	rows, err := ExecuteQueryx("SELECT 1")
 
 	if err != nil {
 		return &backend.CheckHealthResult{

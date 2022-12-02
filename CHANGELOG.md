@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.0.8
+## 0.0.9
+
+- Init new DB connection on Invalid SessionHandle error
+
+### 0.0.8
 
 - Adds temp fix for Invalid SessionHandle 
 
