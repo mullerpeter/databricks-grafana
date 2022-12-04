@@ -1,7 +1,7 @@
 {
   "name": "mullerpeter-databricks-datasource",
   "private": true,
-  "version": "0.0.9",
+  "version": "1.0.0",
   "description": "Databricks SQL Connector",
   "scripts": {
     "build": "grafana-toolkit plugin:build",
@@ -14,11 +14,11 @@
   "author": "Peter Müller",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@grafana/data": "latest",
-    "@grafana/runtime": "latest",
-    "@grafana/toolkit": "latest",
-    "@grafana/ui": "latest",
-    "@types/lodash": "latest"
+    "@grafana/data": "^9.3.1",
+    "@grafana/runtime": "^9.3.1",
+    "@grafana/toolkit": "^9.3.1",
+    "@grafana/ui": "^9.3.1",
+    "@types/lodash": "^4.14.191"
   },
   "resolutions": {
     "rxjs": "7.3.0"

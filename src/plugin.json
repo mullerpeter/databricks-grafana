@@ -3,8 +3,11 @@
   "type": "datasource",
   "name": "Databricks Community Datasource",
   "id": "mullerpeter-databricks-datasource",
-  "metrics": true,
+  "metrics": false,
   "backend": true,
+  "category": "sql",
+  "alerting": true,
+  "annotations": false,
   "executable": "gpx_databricks",
   "info": {
     "description": "Databricks SQL Connector",

@@ -38,28 +38,6 @@ func getIntervalString(duration time.Duration) string {
 	return returnString
 }
 
-func createQueryBuilderQuery(query backend.DataQuery, qm queryModel) string {
-	sqlQuery := ""
-	whereQuery := ""
-	if qm.WhereQuery != "" {
-		whereQuery = fmt.Sprintf(" %s AND", qm.WhereQuery)
-	}
-
-	intervalString := getIntervalString(query.Interval)
-
-	sqlQuery = fmt.Sprintf("SELECT window.start, avg(%s) AS value FROM %s WHERE%s %s BETWEEN '%s' AND '%s' GROUP BY window(%s, '%s')",
-		qm.ValueColumnName,
-		qm.TableName,
-		whereQuery,
-		qm.TimeColumnName,
-		query.TimeRange.From.UTC().Format("2006-01-02 15:04:05"),
-		query.TimeRange.To.UTC().Format("2006-01-02 15:04:05"),
-		qm.TimeColumnName,
-		intervalString)
-
-	return sqlQuery
-}
-
 func replaceMacros(sqlQuery string, query backend.DataQuery) string {
 
 	queryString := sqlQuery
