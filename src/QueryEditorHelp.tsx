@@ -34,7 +34,7 @@ export function QueryEditorHelp(props: Props) {
                     {item.expression ? (
                         <div
                             className="cheat-sheet-item__example"
-                            onClick={(e) => props.onClickExample({ rawSqlQuery: item.rawSqlQuery, rawSqlSelected: item.rawSqlSelected } as MyQuery)}
+                            onClick={(e) => props.onClickExample({ rawSqlQuery: item.rawSqlQuery } as MyQuery)}
                         >
                             <code>{item.expression}</code>
                         </div>

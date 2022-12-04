@@ -1,20 +1,20 @@
 import { DataQuery, DataSourceJsonData } from '@grafana/data';
 
+interface QuerySettings {
+  convertLongToWide: boolean
+  fillMode?: number
+  fillValue?: number
+}
 export interface MyQuery extends DataQuery {
-  timeColumnName: string;
-  valueColumnName: string;
-  whereQuery?: string;
-  tableName: string;
-  withStreaming: boolean;
   rawSqlQuery?: string;
-  rawSqlSelected: boolean;
+  querySettings: QuerySettings;
 }
 
 export const defaultQuery: Partial<MyQuery> = {
-  timeColumnName: "timestamp",
-  valueColumnName: "value",
-  withStreaming: false,
-  rawSqlSelected: false,
+  querySettings: {
+    convertLongToWide: true,
+    fillMode: 1,
+  },
   rawSqlQuery: "SELECT $__time(time_column), $__value(value_column) FROM catalog.default.table_name WHERE $__timeFilter(time_column) GROUP BY $__timeWindow(time_column)"
 };
 
@@ -22,6 +22,7 @@ export const defaultQuery: Partial<MyQuery> = {
  * These are options configured for each DataSource instance.
  */
 export interface MyDataSourceOptions extends DataSourceJsonData {
+  hostname?: string;
   path?: string;
 }
 
@@ -29,8 +30,6 @@ export interface MyDataSourceOptions extends DataSourceJsonData {
  * Value that is used in the backend, but never sent over HTTP to the frontend
  */
 export interface MySecureJsonData {
-  hostname?: string;
-  path?: string;
   token?: string;
 }
 

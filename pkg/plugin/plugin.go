@@ -34,9 +34,19 @@ var (
 	databricksDB                *sqlx.DB
 )
 
+type DatasourceSettings struct {
+	Path     string `json:"path"`
+	Hostname string `json:"hostname"`
+}
+
 // NewSampleDatasource creates a new datasource instance.
 func NewSampleDatasource(settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
-	databricksConnectionsString = fmt.Sprintf("databricks://:%s@%s/%s", settings.DecryptedSecureJSONData["token"], settings.DecryptedSecureJSONData["hostname"], settings.DecryptedSecureJSONData["path"])
+	datasourceSettings := new(DatasourceSettings)
+	err := json.Unmarshal(settings.JSONData, datasourceSettings)
+	if err != nil {
+		log.DefaultLogger.Info("Setting Parse Error", "err", err)
+	}
+	databricksConnectionsString = fmt.Sprintf("databricks://:%s@%s/%s", settings.DecryptedSecureJSONData["token"], datasourceSettings.Hostname, datasourceSettings.Path)
 	if databricksConnectionsString != "" {
 		log.DefaultLogger.Info("Init Databricks SQL DB")
 		db, err := sql.Open("databricks", databricksConnectionsString)
@@ -121,14 +131,15 @@ func (d *SampleDatasource) QueryData(ctx context.Context, req *backend.QueryData
 	return response, nil
 }
 
+type querySettings struct {
+	ConvertLongToWide bool          `json:"convertLongToWide"`
+	FillMode          data.FillMode `json:"fillMode"`
+	FillValue         float64       `json:"fillValue"`
+}
+
 type queryModel struct {
-	WithStreaming   bool   `json:"withStreaming"`
-	TimeColumnName  string `json:"timeColumnName"`
-	ValueColumnName string `json:"valueColumnName"`
-	WhereQuery      string `json:"whereQuery"`
-	TableName       string `json:"tableName"`
-	RawSqlQuery     string `json:"rawSqlQuery"`
-	RawSqlSelected  bool   `json:"rawSqlSelected"`
+	RawSqlQuery   string        `json:"rawSqlQuery"`
+	QuerySettings querySettings `json:"querySettings"`
 }
 
 func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, query backend.DataQuery) backend.DataResponse {
@@ -145,12 +156,8 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 		return response
 	}
 
-	queryString := ""
-	if qm.RawSqlSelected {
-		queryString = replaceMacros(qm.RawSqlQuery, query)
-	} else {
-		queryString = createQueryBuilderQuery(query, qm)
-	}
+	queryString := replaceMacros(qm.RawSqlQuery, query)
+
 	log.DefaultLogger.Info("Query", "query", queryString)
 
 	frame := data.NewFrame("response")
@@ -190,6 +197,16 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 			return response
 		}
 		frame.AppendRow(res...)
+	}
+
+	if qm.QuerySettings.ConvertLongToWide {
+		wideFrame, err := data.LongToWide(frame, &data.FillMissing{Value: qm.QuerySettings.FillValue, Mode: qm.QuerySettings.FillMode})
+		if err != nil {
+			log.DefaultLogger.Info("LongToWide conversion error", "err", err)
+		} else {
+			frame = wideFrame
+		}
+
 	}
 
 	// add the frames to the response.

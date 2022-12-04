@@ -3,7 +3,7 @@ import { LegacyForms } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
 import { MyDataSourceOptions, MySecureJsonData } from './types';
 
-const { SecretFormField } = LegacyForms;
+const { SecretFormField, FormField } = LegacyForms;
 
 interface Props extends DataSourcePluginOptionsEditorProps<MyDataSourceOptions> {}
 
@@ -27,8 +27,8 @@ export class ConfigEditor extends PureComponent<Props, State> {
     const { onOptionsChange, options } = this.props;
     onOptionsChange({
       ...options,
-      secureJsonData: {
-        ...options.secureJsonData,
+      jsonData: {
+        ...options.jsonData,
         hostname: event.target.value,
       },
     });
@@ -38,8 +38,8 @@ export class ConfigEditor extends PureComponent<Props, State> {
     const { onOptionsChange, options } = this.props;
     onOptionsChange({
       ...options,
-      secureJsonData: {
-        ...options.secureJsonData,
+      jsonData: {
+        ...options.jsonData,
         path: event.target.value,
       },
     });
@@ -51,14 +51,10 @@ export class ConfigEditor extends PureComponent<Props, State> {
       ...options,
       secureJsonFields: {
         ...options.secureJsonFields,
-        hostname: false,
-        path: false,
         token: false
       },
       secureJsonData: {
         ...options.secureJsonData,
-        hostname: '',
-        path: '',
         token: '',
       },
     });
@@ -68,33 +64,30 @@ export class ConfigEditor extends PureComponent<Props, State> {
     const { options } = this.props;
     const { secureJsonFields } = options;
     const secureJsonData = (options.secureJsonData || {}) as MySecureJsonData;
+    const jsonData = (options.jsonData || {}) as MyDataSourceOptions;
 
     return (
       <div className="gf-form-group">
         <div className="gf-form--alt">
           <div className="gf-form">
-            <SecretFormField
-                isConfigured={(secureJsonFields && secureJsonFields.hostname) as boolean}
-                value={secureJsonData.hostname || ''}
+            <FormField
+                value={jsonData.hostname || ''}
                 label="Server Hostname"
                 placeholder="XXX.cloud.databricks.com"
                 tooltip="Databricks Server Hostname (without http)"
                 labelWidth={10}
                 inputWidth={500}
-                onReset={this.onResetDBConfig}
                 onChange={this.onHostnameChange}
             />
           </div>
           <div className="gf-form">
-            <SecretFormField
-              isConfigured={(secureJsonFields && secureJsonFields.path) as boolean}
-              value={secureJsonData.path || ''}
+            <FormField
+              value={jsonData.path || ''}
               label="HTTP Path"
               placeholder="sql/1.0/endpoints/XXX"
               tooltip="HTTP Path value for the existing cluster or SQL warehouse."
               labelWidth={10}
               inputWidth={500}
-              onReset={this.onResetDBConfig}
               onChange={this.onPathChange}
             />
           </div>
