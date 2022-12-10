@@ -11,7 +11,8 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
-	"github.com/jmoiron/sqlx"
+	"github.com/grafana/grafana-plugin-sdk-go/data/sqlutil"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -31,7 +32,7 @@ var (
 	_                           backend.StreamHandler         = (*SampleDatasource)(nil)
 	_                           instancemgmt.InstanceDisposer = (*SampleDatasource)(nil)
 	databricksConnectionsString string
-	databricksDB                *sqlx.DB
+	databricksDB                *sql.DB
 )
 
 type DatasourceSettings struct {
@@ -53,7 +54,7 @@ func NewSampleDatasource(settings backend.DataSourceInstanceSettings) (instancem
 		if err != nil {
 			log.DefaultLogger.Info("DB Init Error", "err", err)
 		} else {
-			databricksDB = sqlx.NewDb(db, "databricks")
+			databricksDB = db
 			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 		}
 	}
@@ -69,7 +70,7 @@ func RefreshDBConnection() error {
 			log.DefaultLogger.Info("DB Init Error", "err", err)
 			return err
 		} else {
-			databricksDB = sqlx.NewDb(db, "databricks")
+			databricksDB = db
 			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 			return nil
 		}
@@ -78,15 +79,15 @@ func RefreshDBConnection() error {
 	return errors.New("no connection string set")
 }
 
-func ExecuteQueryx(queryString string) (*sqlx.Rows, error) {
-	rows, err := databricksDB.Queryx(queryString)
+func ExecuteQuery(queryString string) (*sql.Rows, error) {
+	rows, err := databricksDB.Query(queryString)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "Invalid SessionHandle") {
 			err = RefreshDBConnection()
 			if err != nil {
 				return nil, err
 			}
-			rows, err = databricksDB.Queryx(queryString)
+			rows, err = databricksDB.Query(queryString)
 			if err != nil {
 				return nil, err
 			}
@@ -162,41 +163,41 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 
 	frame := data.NewFrame("response")
 
-	rows, err := ExecuteQueryx(queryString)
+	rows, err := ExecuteQuery(queryString)
 	if err != nil {
 		response.Error = err
 		log.DefaultLogger.Info("Error", "err", err)
 		return response
 	}
 
-	colTypes, err := rows.ColumnTypes()
+	dateConverter := sqlutil.Converter{
+		Name:          "Databricks date to timestamp converter",
+		InputScanType: reflect.TypeOf(sql.NullString{}),
+		InputTypeName: "DATE",
+		FrameConverter: sqlutil.FrameConverter{
+			FieldType: data.FieldTypeNullableTime,
+			ConverterFunc: func(n interface{}) (interface{}, error) {
+				v := n.(*sql.NullString)
 
-	if err != nil {
-		response.Error = err
-		log.DefaultLogger.Info("Error", "err", err)
-		return response
-	}
-	columnNames, err := rows.Columns()
-	if err != nil {
-		response.Error = err
-		log.DefaultLogger.Info("Error", "err", err)
-		return response
+				if !v.Valid {
+					return (*time.Time)(nil), nil
+				}
+
+				f := v.String
+				date, error := time.Parse("2006-01-02", f)
+				if error != nil {
+					return (*time.Time)(nil), error
+				}
+				return &date, nil
+			},
+		},
 	}
 
-	frame, err = initDataframeTypes(colTypes, columnNames, frame)
+	frame, err = sqlutil.FrameFromRows(rows, -1, dateConverter)
 	if err != nil {
+		log.DefaultLogger.Info("FrameFromRows", "err", err)
 		response.Error = err
 		return response
-	}
-
-	for rows.Next() {
-		res, err := rows.SliceScan()
-		if err != nil {
-			response.Error = err
-			log.DefaultLogger.Info("Error", "err", err)
-			return response
-		}
-		frame.AppendRow(res...)
 	}
 
 	if qm.QuerySettings.ConvertLongToWide {
@@ -231,7 +232,7 @@ func (d *SampleDatasource) CheckHealth(_ context.Context, req *backend.CheckHeal
 		}, nil
 	}
 
-	rows, err := ExecuteQueryx("SELECT 1")
+	rows, err := ExecuteQuery("SELECT 1")
 
 	if err != nil {
 		return &backend.CheckHealthResult{
