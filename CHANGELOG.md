@@ -1,7 +1,13 @@
 # Changelog
-## 1.0.0
 
-### Breaking Changes: 
+### 1.1.0
+
+- Adds proper type reflection to support all databricks data types. (except type `BINARY` which is not supported)
+---
+
+### 1.0.0
+
+#### Breaking Changes: 
 
 - Datasource configuration (`hostname` & `sql path`) needs to be entered again in the Datasource Settings after upgrading.
 - Queries made via Visual Editor no longer work.
@@ -13,7 +19,6 @@
 - Made some config vars non secret
 - Added alerting capability
 
----
 
 ### 0.0.9
 
