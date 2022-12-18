@@ -6,22 +6,101 @@ Grafana Databricks integration allowing direct connection to Databricks to query
 
 ![img.png](img/full_text_sql_editor.png)
 
-### Signing
+## Get started with the plugin
 
-The build plugin in the release section of this repo is signed for `localhost:3000`. If you want to use it on another domain, you either have build it without signing (or simply delete the `MANIFEST.txt`) and add the plugin ID to the `allow_loading_unsigned_plugins` in the grafana config or sign it yourself according to the [Grafana Documentation](https://grafana.com/docs/grafana/latest/developers/plugins/sign-a-plugin/).
+### Set up the Databricks Data Source
+#### Install the Data Source
 
-defaults.ini
+1. Install the plugin into the grafana plugin folder:
+```shell
+grafana-cli --pluginUrl https://github.com/mullerpeter/databricks-grafana/releases/latest/download/mullerpeter-databricks-datasource.zip plugins install mullerpeter-databricks-datasource
 ```
+or
+```shell
+cd /var/lib/grafana/plugins/
+wget https://github.com/mullerpeter/databricks-grafana/releases/latest/download/mullerpeter-databricks-datasource.zip
+unzip mullerpeter-databricks-datasource.zip
+```
+
+2. Edit the grafana configuration file to allow unsigned plugins:
+* Linux：/etc/grafana/grafana.ini
+* macOS：/usr/local/etc/grafana/grafana.ini
+```shell
 [plugins]
-# Enter a comma-separated list of plugin identifiers to identify plugins to load even if they are unsigned. Plugins with modified signatures are never loaded.
 allow_loading_unsigned_plugins = mullerpeter-databricks-datasource
 ```
+Or with docker
+```shell
+docker run -d \
+-p 3000:3000 \
+-v "$(pwd)"/grafana-plugins:/var/lib/grafana/plugins \
+--name=grafana \
+-e "GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=mullerpeter-databricks-datasource" \
+grafana/grafana
+```
 
-## Plugin Configuration
+3. Restart grafana
+
+#### Configure the Datasource
+
+* Open the side menu by clicking the Grafana icon in the top header.
+* In the side menu under the Configuration icon you should find a link named Data Sources.
+* Click the `+ Add data source` button in the top header.
+* Select Databricks.
+
+To configure the plugin use the values provided under JDBC/ODBC in the advanced options of the Databricks Cluster (or SQL Warehouse) and create a personal access token for Databricks.
 
 ![img_1.png](img/config_editor.png)
 
-To configure the plugin use the values provided under JDBC/ODBC in the advanced options of the Databricks Cluster and create a personal access token for Databricks.
+Available configuration fields are as follows:
+
+| Name            | Description                                                                             |
+|-----------------|-----------------------------------------------------------------------------------------|
+| Server Hostname | Databricks Server Hostname (without http). i.e. `XXX.cloud.databricks.com`              |
+ | HTTP Path       | HTTP Path value for the existing cluster or SQL warehouse. i.e. `sql/1.0/endpoints/XXX` |
+ | Access Token    | Personal Access Token for Databricks.                                                   |
+
+### Supported Macros
+
+All variables used in the SQL query get replaced by their respective values. See Grafana documentation for [Global Variables](https://grafana.com/docs/grafana/v9.3/dashboards/variables/add-template-variables/#global-variables).
+
+Additionally the following Macros can be used within a query to simplify syntax and allow for dynamic parts.
+
+| Macro example                | Description                                                                                                                                       |
+|------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| `$__timeFilter(time_column)` | Will be replaced by an expression to filter on the selected timerange. i.e. `time_column BETWEEN '2021-12-31 23:00:00' AND '2022-01-01 22:59:59'` |
+| `$__timeWindow(time_column)` | Will be replaced by an expression to group by the selected interval. i.e. `window(time_column, '2 HOURS')`                                        |
+ | `$__timeFrom`                | Will be replaced by the start of the selected timerange. i.e. `'2021-12-31 23:00:00'`                                                             |
+ | `$__timeTo`                  | Will be replaced by the end of the selected timerange. i.e. `'2022-01-01 22:59:59'`                                                               |
+
+## Write a query
+
+Use the query editor to write a query, you can use sparksql syntax according to the [Databricks SQL Reference](https://docs.databricks.com/sql/language-manual/index.html).
+
+#### Long to Wide Transformation
+
+By default, the plugin will return the results in wide format. This behavior can be changed in the advanced options of the query editor.
+
+![img.png](img/advanced_options.png)
+
+### Examples
+#### Single Value Time Series
+
+```sparksql
+SELECT $__time(time_column), avg(value_column)
+FROM catalog.default.table_name 
+WHERE $__timeFilter(time_column) 
+GROUP BY $__timeWindow(time_column);
+```
+#### Multiple Values Time Series
+
+```sparksql
+SELECT window.start, avg(o_totalprice), o_orderstatus
+FROM samples.tpch.orders
+WHERE $__timeFilter(o_orderdate)
+GROUP BY $__timeWindow(o_orderdate), o_orderstatus
+ORDER BY start ASC;
+```
 
 # Development
 
