@@ -1,4 +1,4 @@
-import { DataSourceInstanceSettings } from '@grafana/data';
+import { DataSourceInstanceSettings, ScopedVars } from '@grafana/data';
 import { DataSourceWithBackend, getTemplateSrv } from '@grafana/runtime';
 import { MyDataSourceOptions, MyQuery } from './types';
 
@@ -6,11 +6,11 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
     super(instanceSettings);
   }
-  applyTemplateVariables(query: MyQuery) {
+  applyTemplateVariables(query: MyQuery, scopedVars: ScopedVars) {
     const templateSrv = getTemplateSrv();
     return {
       ...query,
-      rawSqlQuery: query.rawSqlQuery ? templateSrv.replace(query.rawSqlQuery) : ''
+      rawSqlQuery: query.rawSqlQuery ? templateSrv.replace(query.rawSqlQuery, scopedVars) : ''
     };
   }
 }

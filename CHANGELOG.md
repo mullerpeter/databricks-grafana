@@ -1,9 +1,14 @@
 # Changelog
 
+## 1.1.2
+
+- Use scoped Variables in template variable replacement
+
+---
+
 ### 1.1.0
 
 - Adds proper type reflection to support all databricks data types. (except type `BINARY` which is not supported)
----
 
 ### 1.0.0
 
