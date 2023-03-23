@@ -40,7 +40,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
       ...options,
       jsonData: {
         ...options.jsonData,
-        path: event.target.value,
+        path: event.target.value.replace(/^\//, ''),
       },
     });
   };
