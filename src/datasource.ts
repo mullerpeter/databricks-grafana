@@ -7,6 +7,7 @@ import {firstValueFrom} from 'rxjs';
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
     constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
         super(instanceSettings);
+        this.annotations = {}
     }
 
     applyTemplateVariables(query: MyQuery, scopedVars: ScopedVars) {

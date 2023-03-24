@@ -1,13 +1,18 @@
 # Changelog
 
-## 1.1.3
+## 1.1.4
+
+- Add annotations support
+
+---
+
+### 1.1.3
 
 - Add variable query support
 - Bugfix: Remove leading slash from SQL path in configuration
 
----
 
-## 1.1.2
+### 1.1.2
 
 - Use scoped Variables in template variable replacement
 
