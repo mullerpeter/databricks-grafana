@@ -38,6 +38,7 @@ var (
 type DatasourceSettings struct {
 	Path     string `json:"path"`
 	Hostname string `json:"hostname"`
+	Port     string `json:"port"`
 }
 
 // NewSampleDatasource creates a new datasource instance.
@@ -47,7 +48,11 @@ func NewSampleDatasource(settings backend.DataSourceInstanceSettings) (instancem
 	if err != nil {
 		log.DefaultLogger.Info("Setting Parse Error", "err", err)
 	}
-	databricksConnectionsString = fmt.Sprintf("token:%s@%s:443/%s", settings.DecryptedSecureJSONData["token"], datasourceSettings.Hostname, datasourceSettings.Path)
+	port := "443"
+	if datasourceSettings.Port != "" {
+		port = datasourceSettings.Port
+	}
+	databricksConnectionsString = fmt.Sprintf("token:%s@%s:%s/%s", settings.DecryptedSecureJSONData["token"], datasourceSettings.Hostname, port, datasourceSettings.Path)
 	if databricksConnectionsString != "" {
 		log.DefaultLogger.Info("Init Databricks SQL DB")
 		db, err := sql.Open("databricks", databricksConnectionsString)
