@@ -23,6 +23,7 @@ export const defaultQuery: Partial<MyQuery> = {
  */
 export interface MyDataSourceOptions extends DataSourceJsonData {
   hostname?: string;
+  port?: string;
   path?: string;
 }
 

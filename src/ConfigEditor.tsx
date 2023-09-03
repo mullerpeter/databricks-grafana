@@ -34,6 +34,17 @@ export class ConfigEditor extends PureComponent<Props, State> {
     });
   };
 
+  onPortChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { onOptionsChange, options } = this.props;
+    onOptionsChange({
+      ...options,
+      jsonData: {
+        ...options.jsonData,
+        port: event.target.value,
+      },
+    });
+  };
+
   onPathChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { onOptionsChange, options } = this.props;
     onOptionsChange({
@@ -78,6 +89,17 @@ export class ConfigEditor extends PureComponent<Props, State> {
                 labelWidth={10}
                 inputWidth={500}
                 onChange={this.onHostnameChange}
+            />
+          </div>
+          <div className="gf-form">
+            <FormField
+                value={jsonData.port || ''}
+                label="Server Port"
+                placeholder="443"
+                tooltip="Databricks Server Port"
+                labelWidth={10}
+                inputWidth={500}
+                onChange={this.onPortChange}
             />
           </div>
           <div className="gf-form">
