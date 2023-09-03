@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.1.4
+## 1.1.5
+
+- Upgrade databricks-sql-go dependency to v1.4.0
+
+---
+
+### 1.1.4
 
 - Add annotations support
 

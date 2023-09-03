@@ -47,7 +47,7 @@ func NewSampleDatasource(settings backend.DataSourceInstanceSettings) (instancem
 	if err != nil {
 		log.DefaultLogger.Info("Setting Parse Error", "err", err)
 	}
-	databricksConnectionsString = fmt.Sprintf("databricks://:%s@%s/%s", settings.DecryptedSecureJSONData["token"], datasourceSettings.Hostname, datasourceSettings.Path)
+	databricksConnectionsString = fmt.Sprintf("token:%s@%s:443/%s", settings.DecryptedSecureJSONData["token"], datasourceSettings.Hostname, datasourceSettings.Path)
 	if databricksConnectionsString != "" {
 		log.DefaultLogger.Info("Init Databricks SQL DB")
 		db, err := sql.Open("databricks", databricksConnectionsString)
