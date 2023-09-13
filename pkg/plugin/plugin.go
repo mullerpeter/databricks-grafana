@@ -27,12 +27,10 @@ import (
 // is useful to clean up resources used by previous datasource instance when a new datasource
 // instance created upon datasource settings changed.
 var (
-	_                           backend.QueryDataHandler      = (*SampleDatasource)(nil)
-	_                           backend.CheckHealthHandler    = (*SampleDatasource)(nil)
-	_                           backend.StreamHandler         = (*SampleDatasource)(nil)
-	_                           instancemgmt.InstanceDisposer = (*SampleDatasource)(nil)
-	databricksConnectionsString string
-	databricksDB                *sql.DB
+	_ backend.QueryDataHandler      = (*SampleDatasource)(nil)
+	_ backend.CheckHealthHandler    = (*SampleDatasource)(nil)
+	_ backend.StreamHandler         = (*SampleDatasource)(nil)
+	_ instancemgmt.InstanceDisposer = (*SampleDatasource)(nil)
 )
 
 type DatasourceSettings struct {
@@ -52,7 +50,8 @@ func NewSampleDatasource(settings backend.DataSourceInstanceSettings) (instancem
 	if datasourceSettings.Port != "" {
 		port = datasourceSettings.Port
 	}
-	databricksConnectionsString = fmt.Sprintf("token:%s@%s:%s/%s", settings.DecryptedSecureJSONData["token"], datasourceSettings.Hostname, port, datasourceSettings.Path)
+	databricksConnectionsString := fmt.Sprintf("token:%s@%s:%s/%s", settings.DecryptedSecureJSONData["token"], datasourceSettings.Hostname, port, datasourceSettings.Path)
+	databricksDB := &sql.DB{}
 	if databricksConnectionsString != "" {
 		log.DefaultLogger.Info("Init Databricks SQL DB")
 		db, err := sql.Open("databricks", databricksConnectionsString)
@@ -64,18 +63,21 @@ func NewSampleDatasource(settings backend.DataSourceInstanceSettings) (instancem
 		}
 	}
 
-	return &SampleDatasource{}, nil
+	return &SampleDatasource{
+		databricksConnectionsString: databricksConnectionsString,
+		databricksDB:                databricksDB,
+	}, nil
 }
 
-func RefreshDBConnection() error {
-	if databricksConnectionsString != "" {
+func (d *SampleDatasource) RefreshDBConnection() error {
+	if d.databricksConnectionsString != "" {
 		log.DefaultLogger.Info("Refreshing Databricks SQL DB Connection")
-		db, err := sql.Open("databricks", databricksConnectionsString)
+		db, err := sql.Open("databricks", d.databricksConnectionsString)
 		if err != nil {
 			log.DefaultLogger.Info("DB Init Error", "err", err)
 			return err
 		} else {
-			databricksDB = db
+			d.databricksDB = db
 			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 			return nil
 		}
@@ -84,15 +86,15 @@ func RefreshDBConnection() error {
 	return errors.New("no connection string set")
 }
 
-func ExecuteQuery(queryString string) (*sql.Rows, error) {
-	rows, err := databricksDB.Query(queryString)
+func (d *SampleDatasource) ExecuteQuery(queryString string) (*sql.Rows, error) {
+	rows, err := d.databricksDB.Query(queryString)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "Invalid SessionHandle") {
-			err = RefreshDBConnection()
+			err = d.RefreshDBConnection()
 			if err != nil {
 				return nil, err
 			}
-			rows, err = databricksDB.Query(queryString)
+			rows, err = d.databricksDB.Query(queryString)
 			if err != nil {
 				return nil, err
 			}
@@ -106,7 +108,10 @@ func ExecuteQuery(queryString string) (*sql.Rows, error) {
 
 // SampleDatasource is an example datasource which can respond to data queries, reports
 // its health and has streaming skills.
-type SampleDatasource struct{}
+type SampleDatasource struct {
+	databricksConnectionsString string
+	databricksDB                *sql.DB
+}
 
 // Dispose here tells plugin SDK that plugin wants to clean up resources when a new instance
 // created. As soon as datasource settings change detected by SDK old datasource instance will
@@ -168,7 +173,7 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 
 	frame := data.NewFrame("response")
 
-	rows, err := ExecuteQuery(queryString)
+	rows, err := d.ExecuteQuery(queryString)
 	if err != nil {
 		response.Error = err
 		log.DefaultLogger.Info("Error", "err", err)
@@ -228,7 +233,7 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 func (d *SampleDatasource) CheckHealth(_ context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
 	log.DefaultLogger.Info("CheckHealth called", "request", req)
 
-	dsn := databricksConnectionsString
+	dsn := d.databricksConnectionsString
 
 	if dsn == "" {
 		return &backend.CheckHealthResult{
@@ -237,7 +242,7 @@ func (d *SampleDatasource) CheckHealth(_ context.Context, req *backend.CheckHeal
 		}, nil
 	}
 
-	rows, err := ExecuteQuery("SELECT 1")
+	rows, err := d.ExecuteQuery("SELECT 1")
 
 	if err != nil {
 		return &backend.CheckHealthResult{
