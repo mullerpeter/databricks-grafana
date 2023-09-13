@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.1.5
+## 1.1.6
+
+- Bugfix: Correctly scope Databricks Connection to Datasource instance, in order to support multiple Databricks Datasources
+
+---
+
+### 1.1.5
 
 - Upgrade databricks-sql-go dependency to v1.4.0
 
