@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	_ "github.com/databricks/databricks-sql-go"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
@@ -13,7 +12,6 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/grafana/grafana-plugin-sdk-go/data/sqlutil"
 	"reflect"
-	"strings"
 	"time"
 )
 
@@ -59,6 +57,7 @@ func NewSampleDatasource(settings backend.DataSourceInstanceSettings) (instancem
 			log.DefaultLogger.Info("DB Init Error", "err", err)
 		} else {
 			databricksDB = db
+			databricksDB.SetConnMaxIdleTime(6 * time.Hour)
 			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 		}
 	}
@@ -67,43 +66,6 @@ func NewSampleDatasource(settings backend.DataSourceInstanceSettings) (instancem
 		databricksConnectionsString: databricksConnectionsString,
 		databricksDB:                databricksDB,
 	}, nil
-}
-
-func (d *SampleDatasource) RefreshDBConnection() error {
-	if d.databricksConnectionsString != "" {
-		log.DefaultLogger.Info("Refreshing Databricks SQL DB Connection")
-		db, err := sql.Open("databricks", d.databricksConnectionsString)
-		if err != nil {
-			log.DefaultLogger.Info("DB Init Error", "err", err)
-			return err
-		} else {
-			d.databricksDB = db
-			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
-			return nil
-		}
-	}
-
-	return errors.New("no connection string set")
-}
-
-func (d *SampleDatasource) ExecuteQuery(queryString string) (*sql.Rows, error) {
-	rows, err := d.databricksDB.Query(queryString)
-	if err != nil {
-		if strings.HasPrefix(err.Error(), "Invalid SessionHandle") {
-			err = d.RefreshDBConnection()
-			if err != nil {
-				return nil, err
-			}
-			rows, err = d.databricksDB.Query(queryString)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
-	}
-
-	return rows, nil
 }
 
 // SampleDatasource is an example datasource which can respond to data queries, reports
@@ -173,7 +135,7 @@ func (d *SampleDatasource) query(_ context.Context, pCtx backend.PluginContext, 
 
 	frame := data.NewFrame("response")
 
-	rows, err := d.ExecuteQuery(queryString)
+	rows, err := d.databricksDB.Query(queryString)
 	if err != nil {
 		response.Error = err
 		log.DefaultLogger.Info("Error", "err", err)
@@ -242,7 +204,7 @@ func (d *SampleDatasource) CheckHealth(_ context.Context, req *backend.CheckHeal
 		}, nil
 	}
 
-	rows, err := d.ExecuteQuery("SELECT 1")
+	rows, err := d.databricksDB.Query("SELECT 1")
 
 	if err != nil {
 		return &backend.CheckHealthResult{

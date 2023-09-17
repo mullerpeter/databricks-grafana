@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.1.6
+## 1.1.7
+
+- Bugfix: Close idle databricks connections after 6 hours
+
+---
+
+### 1.1.6
 
 - Bugfix: Correctly scope Databricks Connection to Datasource instance, in order to support multiple Databricks Datasources
 
