@@ -1,6 +1,13 @@
 # Changelog
 
-## 1.1.7
+## 1.1.8
+
+- Update grafana-plugin-sdk-go to v0.176.0
+- Migrate to @grafana/create-plugin
+
+---
+
+### 1.1.7
 
 - Bugfix: Close idle databricks connections after 6 hours
 
