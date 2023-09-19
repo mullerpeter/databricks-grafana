@@ -3,11 +3,14 @@ import {DataSourceWithBackend, getTemplateSrv} from '@grafana/runtime';
 import {MyDataSourceOptions, MyQuery} from './types';
 import {map, switchMap} from 'rxjs/operators';
 import {firstValueFrom} from 'rxjs';
+import {QuerrySuggestions} from "./QuerrySuggestions";
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
+    public suggestionProvider: QuerrySuggestions;
     constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
         super(instanceSettings);
         this.annotations = {}
+        this.suggestionProvider = new QuerrySuggestions(this);
     }
 
     applyTemplateVariables(query: MyQuery, scopedVars: ScopedVars) {
@@ -50,4 +53,5 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
                 )
             ));
     }
+
 }

@@ -29,6 +29,7 @@ var (
 	_ backend.CheckHealthHandler    = (*SampleDatasource)(nil)
 	_ backend.StreamHandler         = (*SampleDatasource)(nil)
 	_ instancemgmt.InstanceDisposer = (*SampleDatasource)(nil)
+	_ backend.CallResourceHandler   = (*SampleDatasource)(nil)
 )
 
 type DatasourceSettings struct {
@@ -73,6 +74,10 @@ func NewSampleDatasource(settings backend.DataSourceInstanceSettings) (instancem
 type SampleDatasource struct {
 	databricksConnectionsString string
 	databricksDB                *sql.DB
+}
+
+func (d *SampleDatasource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
+	return autocompletionQueries(req, sender, d.databricksDB)
 }
 
 // Dispose here tells plugin SDK that plugin wants to clean up resources when a new instance
