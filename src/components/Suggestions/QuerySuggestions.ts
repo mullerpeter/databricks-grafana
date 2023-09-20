@@ -7,7 +7,7 @@ import {
     templateVariables
 } from "./constants";
 import {Suggestions} from "../../types";
-import {positionToIndex} from "./utils";
+import {getCursorPositionClause, positionToIndex} from "./utils";
 
 type ClauseSuggestionsType = {
     [clause in Clause]: CodeEditorSuggestionItem[]
@@ -58,7 +58,8 @@ export class QuerySuggestions {
         this.initConstantSuggestions();
         this.catalogSchemaTableInit();
     }
-
+    // ts-ignore are used since the grafana-ui types for the suggestions do not contain all the fields of the
+    // underlying monaco editor suggestions, additional fields are needed to insert snippets & sort the suggestions
     private initConstantSuggestions(): void {
         this.constantSuggestions.functions = functions.map((func) => {
             return {
@@ -67,7 +68,9 @@ export class QuerySuggestions {
                 detail: "Function",
                 insertText: func + "(${0})",
                 // @ts-ignore
-                insertTextRules: 4
+                insertTextRules: 4,
+                // @ts-ignore
+                sortText: "d",
             }
         });
         this.constantSuggestions.templateVariables = templateVariables.map((templateVar) => {
@@ -75,6 +78,8 @@ export class QuerySuggestions {
                 label: templateVar,
                 kind: CodeEditorSuggestionItemKind.Constant,
                 detail: "Template Variable",
+                // @ts-ignore
+                sortText: "d",
             }
         });
         // Special template variables with insertText
@@ -84,7 +89,9 @@ export class QuerySuggestions {
             detail: "Template Variable",
             insertText: "\\\$__timeFilter(${0:timeColumn})",
             // @ts-ignore
-            insertTextRules: 4
+            insertTextRules: 4,
+            // @ts-ignore
+            sortText: "d",
         });
         this.constantSuggestions.templateVariables.push({
             label: "$__timeWindow(timeColumn)",
@@ -92,26 +99,10 @@ export class QuerySuggestions {
             detail: "Template Variable",
             insertText: "\\\$__timeWindow(${1:timeColumn})",
             // @ts-ignore
-            insertTextRules: 4
+            insertTextRules: 4,
+            // @ts-ignore
+            sortText: "d",
         });
-    }
-
-    private getCursorPositionClause(value: string, cursorPosition: {lineNumber: number, column: number}): {clause: string, index: number} {
-        // Get the current clause based on the cursor position
-        const clausePattern = new RegExp("(select|use|from|where|group by|order by|\\s\\(|;)(?![\\s\\S]*(select|use|from|where|group by|order by|\\s\\(|;))", "i");
-        const cursorIndex = positionToIndex(value, cursorPosition);
-        const match = clausePattern.exec(value.substring(0, cursorIndex));
-        if (match !== null) {
-            const clause = match[1].includes("(") || match[1].includes(";") ? "START" : match[1];
-            return {
-                clause: clause,
-                index: match.index
-            };
-        }
-        return {
-            clause: "START",
-            index: 0
-        };
     }
 
     private checkMetaDataRefresh(value: string, cursorPosition: {lineNumber: number, column: number}): void {
@@ -119,9 +110,12 @@ export class QuerySuggestions {
 
         const cursorIndex = positionToIndex(value, cursorPosition);
         const matchIndex = this.currentClause === "SELECT" ? cursorIndex : this.currentClauseIndex;
+
+        // Extract table name from query
         const pattern = new RegExp("from\\s+([\\w\.]+)", "i");
         const match = pattern.exec(value.substring(matchIndex));
         if (match) {
+            // Check if table name contains catalog and schema by counting dots
             const dotCount = (match[1].match(/\./g) || []).length;
             let catalog = this.currentCatalog;
             let schema = this.currentSchema;
@@ -170,6 +164,8 @@ export class QuerySuggestions {
                     label: keyword,
                     kind: CodeEditorSuggestionItemKind.Text,
                     detail: "Keyword",
+                    // @ts-ignore
+                    sortText: "b",
                 })
             });
             // Template Variables
@@ -191,7 +187,7 @@ export class QuerySuggestions {
         }
     }
     public updateSuggestions(value: string, cursorPosition: {lineNumber: number, column: number}): void {
-        const currentClauseResponse = this.getCursorPositionClause(value, cursorPosition);
+        const currentClauseResponse = getCursorPositionClause(value, cursorPosition);
         this.currentClause = currentClauseResponse.clause.toUpperCase();
         this.currentClauseIndex = currentClauseResponse.index;
         this.checkUseClause(value);
@@ -205,6 +201,7 @@ export class QuerySuggestions {
     private checkUseClause(value: string): void {
         // Check if USE clause is used and update the default catalog/schema if needed
 
+        // Match USE Catalog clause
         const patternCatalog = new RegExp("use\\s+catalog\\s+(\\w+)", "i");
         const matchCatalog = patternCatalog.exec(value);
         if (matchCatalog) {
@@ -215,6 +212,7 @@ export class QuerySuggestions {
             }
         }
 
+        // Match USE (SCHEMA/DATABASE) clause, but not USE CATALOG
         const patternSchema = new RegExp("use\\s+(?!.*catalog)(schema\\s+|database\\s+)?([\\w\.]+)", "i");
         const matchSchema = patternSchema.exec(value);
         if (matchSchema) {
@@ -250,6 +248,8 @@ export class QuerySuggestions {
                     label: catalog,
                     kind: CodeEditorSuggestionItemKind.Method,
                     detail: "Catalog",
+                    // @ts-ignore
+                    sortText: "a",
                 })
             })
         }).catch((error) => {
@@ -262,6 +262,8 @@ export class QuerySuggestions {
                     label: this.currentCatalog + '.' + schema,
                     kind: CodeEditorSuggestionItemKind.Method,
                     detail: "Schema",
+                    // @ts-ignore
+                    sortText: "a",
                 })
             })
         }).catch((error) => {
@@ -274,6 +276,8 @@ export class QuerySuggestions {
                     label: this.currentCatalog + '.' + this.currentSchema + '.' + table,
                     kind: CodeEditorSuggestionItemKind.Method,
                     detail: "Table",
+                    // @ts-ignore
+                    sortText: "a",
                 })
             })
         }).catch((error) => {
@@ -298,7 +302,9 @@ export class QuerySuggestions {
                     label: column.name,
                     kind: CodeEditorSuggestionItemKind.Field,
                     detail: column.type,
-                    documentation: 'Column'
+                    documentation: 'Column',
+                    // @ts-ignore
+                    sortText: "a",
                 }
             })
             this.rebuildClauseSuggestions();
@@ -323,11 +329,15 @@ export class QuerySuggestions {
                     label: catalog + "." + schema,
                     kind: CodeEditorSuggestionItemKind.Method,
                     detail: "Schema",
+                    // @ts-ignore
+                    sortText: "a",
                 });
                 this.tableSuggestions.push({
                     label: schema,
                     kind: CodeEditorSuggestionItemKind.Method,
                     detail: "Schema",
+                    // @ts-ignore
+                    sortText: "b",
                 });
                 this.rebuildClauseSuggestions();
             });
@@ -353,16 +363,22 @@ export class QuerySuggestions {
                     label: catalog + "." + schema + "." + table,
                     kind: CodeEditorSuggestionItemKind.Method,
                     detail: "Table",
+                    // @ts-ignore
+                    sortText: "a",
                 });
                 this.tableSuggestions.push({
                     label: schema + "." + table,
                     kind: CodeEditorSuggestionItemKind.Method,
                     detail: "Table",
+                    // @ts-ignore
+                    sortText: "b",
                 });
                 this.tableSuggestions.push({
                     label: table,
                     kind: CodeEditorSuggestionItemKind.Method,
                     detail: "Table",
+                    // @ts-ignore
+                    sortText: "c",
                 });
                 this.rebuildClauseSuggestions();
             });
