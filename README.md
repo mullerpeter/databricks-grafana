@@ -54,11 +54,13 @@ To configure the plugin use the values provided under JDBC/ODBC in the advanced 
 
 Available configuration fields are as follows:
 
-| Name            | Description                                                                             |
-|-----------------|-----------------------------------------------------------------------------------------|
-| Server Hostname | Databricks Server Hostname (without http). i.e. `XXX.cloud.databricks.com`              |
- | HTTP Path       | HTTP Path value for the existing cluster or SQL warehouse. i.e. `sql/1.0/endpoints/XXX` |
- | Access Token    | Personal Access Token for Databricks.                                                   |
+| Name                 | Description                                                                                                  |
+|----------------------|--------------------------------------------------------------------------------------------------------------|
+| Server Hostname      | Databricks Server Hostname (without http). i.e. `XXX.cloud.databricks.com`                                   |
+| Server Port          | Databricks Server Port (default `443`)                                                                       |
+| HTTP Path            | HTTP Path value for the existing cluster or SQL warehouse. i.e. `sql/1.0/endpoints/XXX`                      |
+| Access Token         | Personal Access Token for Databricks.                                                                        |
+| Code Auto Completion | If enabled the SQL editor will fetch catalogs/schemas/tables/columns from Databricks to provide suggestions. |
 
 ### Supported Macros
 
@@ -82,6 +84,20 @@ Use the query editor to write a query, you can use sparksql syntax according to 
 By default, the plugin will return the results in wide format. This behavior can be changed in the advanced options of the query editor.
 
 ![img.png](img/advanced_options.png)
+
+#### Code Auto Completion
+
+Auto Completion for the code editor is still in development. Basic functionality is implemented,
+but might not always work perfectly. When enabled, the editor will make requests to Databricks
+while typing to get the available catalogs, schemas, tables and columns. Only the tables present
+in the current query will be fetched.
+Additionally, the editor will also make suggestions for 
+Databricks SQL functions & keywords and Grafana macros.
+
+The feature can be enabled in the Datasource Settings.
+
+<img alt="img.png" src="img/autocomplete-02.png" width="52%"/>
+<img alt="img.png" src="img/autocomplete-01.png" width="40%"/>
 
 ### Examples
 #### Single Value Time Series
