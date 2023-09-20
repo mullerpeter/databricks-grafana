@@ -2,9 +2,11 @@
 
 ## 1.2.0
 
-- Feature: Add support for Auto Complete in Query Editor
-- Feature: Add support to run multi statement queries
-- Refactor: Cleanup unused code in backend
+- Feature: Add support for auto complete suggestions in query editor
+  - Experimental Feature, disabled by default (Can be enabled in Datasource Settings)
+  - Could not find a nice library to generate suggestions for Databricks SQL, so I wrote my own. Feels a bit spaghetti, but it works quite well. Suggestion Model is far from complete but covers most of the use cases.
+- Feature: Add support to run multi statement queries (i.e. `USE <catalog>.<schema>; SELECT * FROM <table>`)
+- Refactor: Cleanup unused code in backend & upgrade legacy form components in config editor
 
 ---
 ### 1.1.8
