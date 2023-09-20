@@ -15,8 +15,8 @@ import {QueryEditorProps, SelectableValue} from '@grafana/data';
 
 import { editor } from 'monaco-editor/esm/vs/editor/editor.api';
 
-import {DataSource} from './datasource';
-import {defaultQuery, MyDataSourceOptions, MyQuery} from './types';
+import {DataSource} from '../../datasource';
+import {defaultQuery, MyDataSourceOptions, MyQuery} from '../../types';
 
 type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 
@@ -29,13 +29,15 @@ export function QueryEditor(props: Props) {
     ];
 
     const [cursorPosition, setCursorPosition] = useState({lineNumber: 0, column: 0});
-    const [queryValue, setQueryValue] = useState("");
-    const { datasource } = props;
+    const { datasource  } = props;
 
+    const codeAutoCompletion = datasource.autoCompletionEnabled;
     const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
 
     const query = defaults(props.query, defaultQuery);
     const { rawSqlQuery, querySettings } = query;
+
+    const [queryValue, setQueryValue] = useState(rawSqlQuery || "");
 
     const onSQLQueryChange = (value: string) => {
         const { onChange, query } = props;
@@ -47,8 +49,10 @@ export function QueryEditor(props: Props) {
     }
 
     useEffect(() => {
-        datasource.suggestionProvider.updateSuggestions(queryValue, cursorPosition);
-    }, [queryValue, cursorPosition, datasource.suggestionProvider]);
+        if (codeAutoCompletion) {
+            datasource.suggestionProvider.updateSuggestions(queryValue, cursorPosition);
+        }
+    }, [queryValue, cursorPosition, datasource.suggestionProvider, codeAutoCompletion]);
 
 
     const onLongToWideSwitchChange = (event: any) => {
@@ -93,7 +97,7 @@ export function QueryEditor(props: Props) {
                   onSave={onSQLQueryChange}
                   showMiniMap={false}
                   showLineNumbers={false}
-                  getSuggestions={getSuggestions}
+                  getSuggestions={codeAutoCompletion ? getSuggestions : undefined}
                   onChange={onQueryValueChange}
                   onEditorDidMount={editorDidMount}
                   />

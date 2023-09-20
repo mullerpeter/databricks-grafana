@@ -1,6 +1,6 @@
 import React from 'react';
 import { QueryEditorHelpProps} from '@grafana/data';
-import { MyQuery } from './types';
+import { MyQuery } from '../../types';
 
 const examples = [
     {

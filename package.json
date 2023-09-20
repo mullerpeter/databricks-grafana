@@ -1,7 +1,7 @@
 {
   "name": "mullerpeter-databricks-datasource",
   "private": true,
-  "version": "1.1.8",
+  "version": "1.2.0",
   "description": "Databricks SQL Connector",
   "scripts": {
     "build": "webpack -c ./.config/webpack/webpack.config.ts --env production",

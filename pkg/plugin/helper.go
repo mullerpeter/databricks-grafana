@@ -20,6 +20,11 @@ type columnsResponseBody struct {
 	ColumnType string `json:"type"`
 }
 
+type defaultsResponseBody struct {
+	DefaultCatalog string `json:"defaultCatalog"`
+	DefaultSchema  string `json:"defaultSchema"`
+}
+
 func autocompletionQueries(req *backend.CallResourceRequest, sender backend.CallResourceResponseSender, db *sql.DB) error {
 	path := req.Path
 	log.DefaultLogger.Info("CallResource called", "path", path)
@@ -173,6 +178,34 @@ func autocompletionQueries(req *backend.CallResourceRequest, sender backend.Call
 		}
 
 		jsonBody, err := json.Marshal(columnsResponse)
+		if err != nil {
+			log.DefaultLogger.Error("CallResource Error", "err", err)
+			return err
+		}
+		err = sender.Send(&backend.CallResourceResponse{
+			Status: 200,
+			Body:   jsonBody,
+		})
+		return err
+	case "defaults":
+		queryString := "SELECT current_catalog(), current_schema();"
+		log.DefaultLogger.Info("CallResource called", "queryString", queryString)
+		row := db.QueryRow(queryString)
+		var currentCatalog sql.NullString
+		var currentSchema sql.NullString
+
+		err := row.Scan(&currentCatalog, &currentSchema)
+		if err != nil {
+			log.DefaultLogger.Error("CallResource Error", "err", err)
+			return err
+		}
+
+		defaultsResponse := defaultsResponseBody{
+			DefaultCatalog: currentCatalog.String,
+			DefaultSchema:  currentSchema.String,
+		}
+
+		jsonBody, err := json.Marshal(defaultsResponse)
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err

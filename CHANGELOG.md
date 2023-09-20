@@ -1,6 +1,13 @@
 # Changelog
 
-## 1.1.8
+## 1.2.0
+
+- Feature: Add support for Auto Complete in Query Editor
+- Feature: Add support to run multi statement queries
+- Refactor: Cleanup unused code in backend
+
+---
+### 1.1.8
 
 - Update grafana-plugin-sdk-go to v0.176.0
 - Migrate to @grafana/create-plugin
