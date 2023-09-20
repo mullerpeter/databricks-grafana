@@ -1,4 +1,4 @@
-import { DataQuery, DataSourceJsonData } from '@grafana/data';
+import {DataQuery, DataSourceJsonData} from '@grafana/data';
 
 interface QuerySettings {
   convertLongToWide: boolean
@@ -25,6 +25,7 @@ export interface MyDataSourceOptions extends DataSourceJsonData {
   hostname?: string;
   port?: string;
   path?: string;
+  autoCompletion?: boolean;
 }
 
 /**
@@ -37,4 +38,16 @@ export interface MySecureJsonData {
 export interface MyVariableQuery {
   namespace: string;
   rawQuery: string;
+}
+
+export interface Column {
+  name: string
+  type: string
+}
+
+export interface Suggestions {
+  catalogs: string[]
+  schemas: string[]
+  tables: string[]
+  columns: Column[]
 }

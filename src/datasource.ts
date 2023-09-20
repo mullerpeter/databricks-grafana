@@ -3,11 +3,16 @@ import {DataSourceWithBackend, getTemplateSrv} from '@grafana/runtime';
 import {MyDataSourceOptions, MyQuery} from './types';
 import {map, switchMap} from 'rxjs/operators';
 import {firstValueFrom} from 'rxjs';
+import {QuerySuggestions} from "./components/Suggestions/QuerySuggestions";
 
 export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
+    public suggestionProvider: QuerySuggestions;
+    public autoCompletionEnabled: boolean;
     constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
         super(instanceSettings);
         this.annotations = {}
+        this.suggestionProvider = new QuerySuggestions(this);
+        this.autoCompletionEnabled = instanceSettings.jsonData.autoCompletion || false;
     }
 
     applyTemplateVariables(query: MyQuery, scopedVars: ScopedVars) {
@@ -50,4 +55,5 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
                 )
             ));
     }
+
 }
