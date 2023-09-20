@@ -6,7 +6,7 @@ import {
     functions,
     templateVariables
 } from "./constants";
-import {Suggestions} from "../../types";
+import {Column, Suggestions} from "../../types";
 import {getCursorPositionClause, positionToIndex} from "./utils";
 
 type ClauseSuggestionsType = {
@@ -43,6 +43,7 @@ export class QuerySuggestions {
     private loadedTables: string[] = [];
 
     private fetchedTableColumns = "";
+    private tableColumnsCache: Map<string, Column[]> = new Map<string, Column[]>();
 
     private currentClause = "";
     private currentClauseIndex = 0;
@@ -105,6 +106,38 @@ export class QuerySuggestions {
         });
     }
 
+    private async tryFetchTable(table: string): Promise<void> {
+        const tableNameComponents = table.split(".");
+        if (tableNameComponents.length === 3) {
+            // Case where table name in format catalog.schema.table
+            await this.getSchemas(tableNameComponents[0]);
+            await this.getTables(tableNameComponents[0], tableNameComponents[1]);
+            await this.getColumns(table);
+        }
+        if (tableNameComponents.length === 2) {
+            // Case where table name in format catalog.schema.table, but user is still typing table name
+            // so only catalog and schema are known and need to be fetched
+            await this.getSchemas(tableNameComponents[0]);
+            await this.getTables(tableNameComponents[0], tableNameComponents[1]);
+
+            // Case where default catalog is used and table name is in format schema.table
+            await this.getTables(this.currentCatalog, tableNameComponents[0]);
+            await this.getColumns(this.currentCatalog + "." + table);
+        }
+        if (tableNameComponents.length === 1) {
+            // Case where table name in format catalog.schema.table, but user is still typing table name
+            // so only catalog is known and need to be fetched
+            await this.getSchemas(tableNameComponents[0]);
+
+            // Case where default catalog is used and table name is in format schema.table, user is still typing
+            // table name so only schema is known and need to be fetched
+            await this.getTables(this.currentCatalog, tableNameComponents[0]);
+
+            // Case where default catalog and schema are used and table name is in format table
+            await this.getColumns(this.currentCatalog + "." + this.currentSchema + "." + tableNameComponents[0]);
+        }
+    }
+
     private checkMetaDataRefresh(value: string, cursorPosition: {lineNumber: number, column: number}): void {
         // Check if fetch of catalog/schema/table/column metadata from databricks is needed
 
@@ -116,42 +149,7 @@ export class QuerySuggestions {
         const match = pattern.exec(value.substring(matchIndex));
         if (match) {
             // Check if table name contains catalog and schema by counting dots
-            const dotCount = (match[1].match(/\./g) || []).length;
-            let catalog = this.currentCatalog;
-            let schema = this.currentSchema;
-            let table = match[1];
-            if (dotCount === 0) {
-                if (this.loadedTables.includes(catalog + "." + schema)) {
-                    this.getColumns(catalog + "." + schema + "." + table);
-                } else {
-                    // Try if string is catalog or schema, in case USE clause is used or default schema/catalog is used
-                    this.getSchemas(table);
-                    this.getTables(catalog, table);
-                }
-            }
-            if (dotCount === 1) {
-                schema = match[1].split(".")[0];
-                table = match[1].split(".")[1];
-                if (this.loadedTables.includes(catalog + "." + schema)) {
-                    this.getTables(catalog, schema).then(() => {
-                        this.getColumns(catalog + "." + schema + "." + table);
-                    });
-                } else {
-                    // Try if first string is schema, in case USE clause is used or default catalog is used
-                    this.getSchemas(schema);
-                    this.getTables(schema, table);
-                }
-            }
-            if (dotCount === 2) {
-                catalog = match[1].split(".")[0];
-                schema = match[1].split(".")[1];
-                table = match[1].split(".")[2];
-                if (this.loadedTables.includes(catalog + "." + schema)) {
-                    this.getTables(catalog, schema).then(() => {
-                        this.getColumns(catalog + "." + schema + "." + table);
-                    });
-                }
-            }
+            this.tryFetchTable(match[1]);
         }
     }
 
@@ -294,9 +292,27 @@ export class QuerySuggestions {
         if (!this.suggestions.tables.includes(table)) {
             return;
         }
+        if (this.tableColumnsCache.has(table)) {
+            this.fetchedTableColumns = table;
+            this.suggestions.columns = this.tableColumnsCache.get(table) || [];
+            this.columnSuggestions = this.suggestions.columns.map((column): CodeEditorSuggestionItem => {
+                return {
+                    label: column.name,
+                    kind: CodeEditorSuggestionItemKind.Field,
+                    detail: column.type,
+                    documentation: 'Column',
+                    // @ts-ignore
+                    sortText: "a",
+                }
+            })
+            this.rebuildClauseSuggestions();
+            return;
+        }
         this.fetchedTableColumns = table;
+        this.tableColumnsCache.set(table, []);
         this.dataSource.postResource("columns", {table: table}).then((columns) => {
             this.suggestions.columns = columns;
+            this.tableColumnsCache.set(table, columns);
             this.columnSuggestions = this.suggestions.columns.map((column): CodeEditorSuggestionItem => {
                 return {
                     label: column.name,
