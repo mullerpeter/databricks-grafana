@@ -1,7 +1,7 @@
 import {DataFrame, DataQueryRequest, DataSourceInstanceSettings, MetricFindValue, ScopedVars} from '@grafana/data';
 import {DataSourceWithBackend, getTemplateSrv} from '@grafana/runtime';
 import {MyDataSourceOptions, MyQuery} from './types';
-import {map, switchMap} from 'rxjs/operators';
+import {switchMap} from 'rxjs/operators';
 import {firstValueFrom} from 'rxjs';
 import {QuerySuggestions} from "./components/Suggestions/QuerySuggestions";
 
