@@ -46,13 +46,20 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
                     return response.data;
                 }),
                 switchMap((data: DataFrame) => {
-                    return data.fields;
-                }),
-                map((field) =>
-                    field.values.toArray().map((value) => {
-                        return {text: value};
-                    })
-                )
+                    if (data.fields.length === 0) {
+                        return [];
+                    } else if (data.fields.length === 1) {
+                        var i0:MetricFindValue[] = data.fields[0].values.toArray().map((v, i)=>{
+                            return {text: v}
+                        })
+                        return [i0];
+                    } else {
+                        var i0:MetricFindValue[] = data.fields[0].values.toArray().map((v, i)=>{
+                            return {text: data.fields[1].values.toArray()[i], value: v}
+                        })
+                        return [i0];
+                    }
+                })
             ));
     }
 
