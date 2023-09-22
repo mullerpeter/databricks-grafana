@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1
+
+- Label support for query varaible in dashboard
+
 ## 1.2.0
 
 - Feature: Add support for auto complete suggestions in query editor
