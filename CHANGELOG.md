@@ -4,7 +4,8 @@
 
 - Label support for query varaible in dashboard
 
-## 1.2.0
+---
+### 1.2.0
 
 - Feature: Add support for auto complete suggestions in query editor
   - Experimental Feature, disabled by default (Can be enabled in Datasource Settings)
