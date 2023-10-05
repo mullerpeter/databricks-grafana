@@ -9,6 +9,12 @@ Grafana Databricks integration allowing direct connection to Databricks to query
 ## Get started with the plugin
 
 ### Set up the Databricks Data Source
+#### Requirements
+
+- Grafana Version >= 9.1.0
+
+If you are using an earlier Grafana version try the [v1.1.7](https://github.com/mullerpeter/databricks-grafana/releases/tag/v1.1.7) release of this plugin, which is the latest release supporting Grafana > 7.0
+
 #### Install the Data Source
 
 1. Install the plugin into the grafana plugin folder:
