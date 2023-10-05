@@ -2,7 +2,7 @@
 
 ## 1.2.1
 
-- Label support for query varaible in dashboard
+- Feature: Add label support for query variable in dashboard
 
 ---
 ### 1.2.0
