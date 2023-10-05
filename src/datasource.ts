@@ -1,7 +1,7 @@
 import {DataFrame, DataQueryRequest, DataSourceInstanceSettings, MetricFindValue, ScopedVars} from '@grafana/data';
 import {DataSourceWithBackend, getTemplateSrv} from '@grafana/runtime';
 import {MyDataSourceOptions, MyQuery} from './types';
-import {map, switchMap} from 'rxjs/operators';
+import {switchMap} from 'rxjs/operators';
 import {firstValueFrom} from 'rxjs';
 import {QuerySuggestions} from "./components/Suggestions/QuerySuggestions";
 
@@ -46,13 +46,18 @@ export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptio
                     return response.data;
                 }),
                 switchMap((data: DataFrame) => {
-                    return data.fields;
-                }),
-                map((field) =>
-                    field.values.toArray().map((value) => {
-                        return {text: value};
-                    })
-                )
+                    if (data.fields.length === 0) {
+                        return [];
+                    } else if (data.fields.length === 1) {
+                        return [data.fields[0].values.toArray().map((v, i)=>{
+                            return {text: v}
+                        })];
+                    } else {
+                        return [data.fields[0].values.toArray().map((v, i)=>{
+                            return {text: data.fields[1].values.toArray()[i], value: v}
+                        })];
+                    }
+                })
             ));
     }
 
