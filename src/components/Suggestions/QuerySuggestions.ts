@@ -48,8 +48,8 @@ export class QuerySuggestions {
     private currentClause = "";
     private currentClauseIndex = 0;
 
-    private currentCatalog = "hive_metastore";
-    private currentSchema = "default";
+    private currentCatalog: string | undefined = undefined;
+    private currentSchema: string | undefined = undefined;
 
     private tableSuggestions: CodeEditorSuggestionItem[] = [];
     private columnSuggestions: CodeEditorSuggestionItem[] = [];
@@ -121,8 +121,10 @@ export class QuerySuggestions {
             await this.getTables(tableNameComponents[0], tableNameComponents[1]);
 
             // Case where default catalog is used and table name is in format schema.table
-            await this.getTables(this.currentCatalog, tableNameComponents[0]);
-            await this.getColumns(this.currentCatalog + "." + table);
+            if (this.currentCatalog) {
+                await this.getTables(this.currentCatalog, tableNameComponents[0]);
+                await this.getColumns(this.currentCatalog + "." + table);
+            }
         }
         if (tableNameComponents.length === 1) {
             // Case where table name in format catalog.schema.table, but user is still typing table name
@@ -131,10 +133,14 @@ export class QuerySuggestions {
 
             // Case where default catalog is used and table name is in format schema.table, user is still typing
             // table name so only schema is known and need to be fetched
-            await this.getTables(this.currentCatalog, tableNameComponents[0]);
+            if (this.currentCatalog) {
+                await this.getTables(this.currentCatalog, tableNameComponents[0]);
+            }
 
             // Case where default catalog and schema are used and table name is in format table
-            await this.getColumns(this.currentCatalog + "." + this.currentSchema + "." + tableNameComponents[0]);
+            if (this.currentCatalog && this.currentSchema) {
+                await this.getColumns(this.currentCatalog + "." + this.currentSchema + "." + tableNameComponents[0]);
+            }
         }
     }
 
@@ -223,7 +229,7 @@ export class QuerySuggestions {
                     this.getSchemas(catalog);
                 }
             }
-            if (this.suggestions.schemas.includes(schema)) {
+            if (this.currentCatalog && this.suggestions.schemas.includes(schema)) {
                 this.currentSchema = schema;
                 this.getTables(this.currentCatalog, schema);
             }
@@ -239,7 +245,7 @@ export class QuerySuggestions {
             console.log(error);
         });
 
-        this.dataSource.postResource("catalogs", {}).then((catalogs) => {
+        await this.dataSource.postResource("catalogs", {}).then((catalogs) => {
             this.suggestions.catalogs = catalogs;
             this.suggestions.catalogs.forEach((catalog) => {
                 this.tableSuggestions.push({
@@ -253,34 +259,44 @@ export class QuerySuggestions {
         }).catch((error) => {
             console.log(error);
         })
-        this.dataSource.postResource("schemas", {catalog: this.currentCatalog}).then((schemas) => {
-            this.suggestions.schemas = schemas;
-            this.suggestions.schemas.forEach((schema) => {
-                this.tableSuggestions.push({
-                    label: this.currentCatalog + '.' + schema,
-                    kind: CodeEditorSuggestionItemKind.Method,
-                    detail: "Schema",
-                    // @ts-ignore
-                    sortText: "a",
+
+        if (!(this.currentCatalog && this.currentCatalog in this.suggestions.catalogs)) {
+            this.currentCatalog = undefined
+        } else {
+            await this.dataSource.postResource("schemas", {catalog: this.currentCatalog}).then((schemas) => {
+                this.suggestions.schemas = schemas;
+                this.suggestions.schemas.forEach((schema) => {
+                    this.tableSuggestions.push({
+                        label: this.currentCatalog + '.' + schema,
+                        kind: CodeEditorSuggestionItemKind.Method,
+                        detail: "Schema",
+                        // @ts-ignore
+                        sortText: "a",
+                    })
                 })
+            }).catch((error) => {
+                console.log(error);
             })
-        }).catch((error) => {
-            console.log(error);
-        })
-        this.dataSource.postResource("tables", {catalog: this.currentCatalog, schema: this.currentSchema}).then((tables) => {
-            this.suggestions.tables = tables;
-            this.suggestions.tables.forEach((table) => {
-                this.tableSuggestions.push({
-                    label: this.currentCatalog + '.' + this.currentSchema + '.' + table,
-                    kind: CodeEditorSuggestionItemKind.Method,
-                    detail: "Table",
-                    // @ts-ignore
-                    sortText: "a",
+        }
+
+        if (!(this.currentSchema && this.currentSchema in this.suggestions.schemas)) {
+            this.currentSchema = undefined
+        } else {
+            this.dataSource.postResource("tables", {catalog: this.currentCatalog, schema: this.currentSchema}).then((tables) => {
+                this.suggestions.tables = tables;
+                this.suggestions.tables.forEach((table) => {
+                    this.tableSuggestions.push({
+                        label: this.currentCatalog + '.' + this.currentSchema + '.' + table,
+                        kind: CodeEditorSuggestionItemKind.Method,
+                        detail: "Table",
+                        // @ts-ignore
+                        sortText: "a",
+                    })
                 })
+            }).catch((error) => {
+                console.log(error);
             })
-        }).catch((error) => {
-            console.log(error);
-        })
+        }
 
         this.rebuildClauseSuggestions();
     }
