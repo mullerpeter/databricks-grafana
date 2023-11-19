@@ -39,7 +39,7 @@ type DatasourceSettings struct {
 }
 
 // NewSampleDatasource creates a new datasource instance.
-func NewSampleDatasource(settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
+func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
 	datasourceSettings := new(DatasourceSettings)
 	err := json.Unmarshal(settings.JSONData, datasourceSettings)
 	if err != nil {
