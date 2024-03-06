@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.0
 
 require (
-	github.com/databricks/databricks-sql-go v1.5.2
+	github.com/databricks/databricks-sql-go v1.5.3
 	github.com/grafana/grafana-plugin-sdk-go v0.213.0
 )
 
