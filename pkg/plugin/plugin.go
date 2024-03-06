@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	_ "github.com/databricks/databricks-sql-go"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
@@ -67,6 +68,43 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 		databricksConnectionsString: databricksConnectionsString,
 		databricksDB:                databricksDB,
 	}, nil
+}
+
+func (d *Datasource) RefreshDBConnection() error {
+	if d.databricksConnectionsString != "" {
+		log.DefaultLogger.Info("Refreshing Databricks SQL DB Connection")
+		db, err := sql.Open("databricks", d.databricksConnectionsString)
+		if err != nil {
+			log.DefaultLogger.Info("DB Init Error", "err", err)
+			return err
+		} else {
+			d.databricksDB = db
+			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
+			return nil
+		}
+	}
+
+	return errors.New("no connection string set")
+}
+
+func (d *Datasource) ExecuteQuery(queryString string) (*sql.Rows, error) {
+	rows, err := d.databricksDB.Query(queryString)
+	if err != nil {
+		if strings.Contains(err.Error(), "Invalid SessionHandle") {
+			err = d.RefreshDBConnection()
+			if err != nil {
+				return nil, err
+			}
+			rows, err = d.ExecuteQuery(queryString)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	return rows, nil
 }
 
 // Datasource is an example datasource which can respond to data queries, reports
@@ -150,7 +188,7 @@ func (d *Datasource) query(_ context.Context, pCtx backend.PluginContext, query 
 		if len(queries) > 1 {
 			// Execute all but the last statement without returning any data
 			for _, query := range queries[:len(queries)-1] {
-				_, err := d.databricksDB.Exec(query)
+				_, err := d.ExecuteQuery(query)
 				if err != nil {
 					response.Error = err
 					log.DefaultLogger.Info("Error", "err", err)
@@ -166,7 +204,7 @@ func (d *Datasource) query(_ context.Context, pCtx backend.PluginContext, query 
 
 	frame := data.NewFrame("response")
 
-	rows, err := d.databricksDB.Query(queryString)
+	rows, err := d.ExecuteQuery(queryString)
 	if err != nil {
 		response.Error = err
 		log.DefaultLogger.Info("Error", "err", err)
@@ -235,7 +273,7 @@ func (d *Datasource) CheckHealth(_ context.Context, req *backend.CheckHealthRequ
 		}, nil
 	}
 
-	rows, err := d.databricksDB.Query("SELECT 1")
+	rows, err := d.ExecuteQuery("SELECT 1")
 
 	if err != nil {
 		return &backend.CheckHealthResult{
