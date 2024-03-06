@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.2.2
+## 1.2.3
+
+- Bugfix: Reintroduce Connection Refresh on Invalid SessionHandle error
+
+---
+
+### 1.2.2
 
 - Bugfix: (Auto complete suggestions) Check if current schema & current catalog exist before fetching tables/schemas/columns
 - Chore: Upgrade go & npm dependencies to latest versions
