@@ -7,5 +7,6 @@
     "group:recommended",
     "replacements:all",
     "workarounds:all"
-  ]
+  ],
+  "enabled": false
 }
