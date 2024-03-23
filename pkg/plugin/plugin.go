@@ -79,6 +79,7 @@ func (d *Datasource) RefreshDBConnection() error {
 			return err
 		} else {
 			d.databricksDB = db
+			d.databricksDB.SetConnMaxIdleTime(6 * time.Hour)
 			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 			return nil
 		}
