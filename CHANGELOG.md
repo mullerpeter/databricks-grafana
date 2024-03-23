@@ -1,6 +1,13 @@
 # Changelog
 
-## 1.2.3
+## 1.2.4
+
+- Chore: Upgrade go & npm dependencies to latest versions
+- Refactor: SetConnMaxIdleTime to 6 hours on Databricks Connection Refresh
+
+---
+
+### 1.2.3
 
 - Bugfix: Reintroduce Connection Refresh on Invalid SessionHandle error
 
