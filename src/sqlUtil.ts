@@ -1,9 +1,11 @@
 import { isEmpty } from 'lodash';
 
-import { createSelectClause, haveColumns, RAQBFieldTypes } from 'components/grafana-sql/src';
-import {MySQLQuery} from "./PostgresQueryModel";
+import {createSelectClause, haveColumns, RAQBFieldTypes, SQLQuery} from 'components/grafana-sql/src';
 
 export function getFieldConfig(type: string): { raqbFieldType: RAQBFieldTypes; icon: string } {
+  if (type.includes('decimal')) {
+      return { raqbFieldType: 'number', icon: 'calculator-alt' };
+  }
   switch (type) {
     case 'boolean': {
       return { raqbFieldType: 'boolean', icon: 'toggle-off' };
@@ -11,17 +13,17 @@ export function getFieldConfig(type: string): { raqbFieldType: RAQBFieldTypes; i
     case 'bit':
     case 'bit varying':
     case 'character':
-    case 'character varying':
-    case 'text': {
+    case 'string': {
       return { raqbFieldType: 'text', icon: 'text' };
     }
     case 'smallint':
-    case 'integer':
+    case 'int':
     case 'bigint':
     case 'decimal':
     case 'numeric':
     case 'real':
-    case 'double precision':
+    case 'float':
+    case 'double':
     case 'serial':
     case 'bigserial':
     case 'smallserial': {
@@ -46,7 +48,7 @@ export function getFieldConfig(type: string): { raqbFieldType: RAQBFieldTypes; i
   }
 }
 
-export function toRawSql({ sql, table }: MySQLQuery): string {
+export function toRawSql({ sql, table, dataset }: SQLQuery): string {
   let rawQuery = '';
 
   // Return early with empty string if there is no sql column
@@ -57,7 +59,7 @@ export function toRawSql({ sql, table }: MySQLQuery): string {
   rawQuery += createSelectClause(sql.columns);
 
   if (table) {
-    rawQuery += `FROM ${table} `;
+    rawQuery += `FROM samples.${dataset}.${table} `;
   }
 
   if (sql.whereString) {

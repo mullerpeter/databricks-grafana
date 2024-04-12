@@ -7,17 +7,16 @@ import { GrafanaTheme2 } from '@grafana/data';
 import { reportInteraction } from '@grafana/runtime';
 import { Modal, useStyles2, useTheme2 } from '@grafana/ui';
 
-import { QueryEditorProps } from '../../types';
+import {QueryEditorProps, SQLQuery} from '../../types';
 
 import { QueryEditorRaw } from './QueryEditorRaw';
 import { QueryToolbox } from './QueryToolbox';
-import {MySQLQuery} from "../../../../../PostgresQueryModel";
 
 interface RawEditorProps extends Omit<QueryEditorProps, 'onChange'> {
   onRunQuery: () => void;
-  onChange: (q: MySQLQuery, processQuery: boolean) => void;
+  onChange: (q: SQLQuery, processQuery: boolean) => void;
   onValidate: (isValid: boolean) => void;
-  queryToValidate: MySQLQuery;
+  queryToValidate: SQLQuery;
 }
 
 export function RawEditor({ db, query, onChange, onRunQuery, onValidate, queryToValidate, range }: RawEditorProps) {

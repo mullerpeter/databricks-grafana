@@ -59,6 +59,8 @@ export interface SQLQuery extends DataQuery {
   sql?: SQLExpression;
   editorMode?: EditorMode;
   rawQuery?: boolean;
+  // Deprecated: kept for backward compatibility
+  rawSqlQuery?: string;
 }
 
 export interface NameValue {

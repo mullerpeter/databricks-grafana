@@ -74,7 +74,7 @@ export function SelectRow({ sql, format, columns, onSqlChange, functions }: Sele
       let newItem = { ...item };
 
       if (alias !== null) {
-        newItem = { ...item, alias: `"${alias?.value?.trim()}"` };
+        newItem = { ...item, alias: `${alias?.value?.trim()}` };
       } else {
         delete newItem.alias;
       }

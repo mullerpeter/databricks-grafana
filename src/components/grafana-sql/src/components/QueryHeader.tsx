@@ -8,19 +8,18 @@ import { reportInteraction } from '@grafana/runtime';
 import { Button, InlineSwitch, RadioButtonGroup, Tooltip, Space } from '@grafana/ui';
 
 import { QueryWithDefaults } from '../defaults';
-import { QueryFormat, QueryRowFilter, QUERY_FORMAT_OPTIONS, DB, SQLDialect } from '../types';
+import {QueryFormat, QueryRowFilter, QUERY_FORMAT_OPTIONS, DB, SQLDialect, SQLQuery} from '../types';
 
 import { ConfirmModal } from './ConfirmModal';
 import { DatasetSelector } from './DatasetSelector';
 import { isSqlDatasourceDatabaseSelectionFeatureFlagEnabled } from './QueryEditorFeatureFlag.utils';
 import { TableSelector } from './TableSelector';
-import {MySQLQuery} from "../../../../PostgresQueryModel";
 
 export interface QueryHeaderProps {
   db: DB;
   dialect: SQLDialect;
   isQueryRunnable: boolean;
-  onChange: (query: MySQLQuery) => void;
+  onChange: (query: SQLQuery) => void;
   onQueryRowChange: (queryRowFilter: QueryRowFilter) => void;
   onRunQuery: () => void;
   preconfiguredDataset: string;
@@ -98,7 +97,7 @@ export function QueryHeader({
       return;
     }
 
-    const next: MySQLQuery = {
+    const next: SQLQuery = {
       ...query,
       table: e.value,
       sql: undefined,

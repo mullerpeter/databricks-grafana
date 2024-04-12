@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 
 import { LanguageDefinition, SQLEditor } from '@grafana/experimental';
-import {MySQLQuery} from "../../../../../PostgresQueryModel";
+import {SQLQuery} from "../../types";
 
 type Props = {
-  query: MySQLQuery;
-  onChange: (value: MySQLQuery, processQuery: boolean) => void;
+  query: SQLQuery;
+  onChange: (value: SQLQuery, processQuery: boolean) => void;
   children?: (props: { formatQuery: () => void }) => React.ReactNode;
   width?: number;
   height?: number;
@@ -14,7 +14,7 @@ type Props = {
 
 export function QueryEditorRaw({ children, onChange, query, width, height, editorLanguageDefinition }: Props) {
   // We need to pass query via ref to SQLEditor as onChange is executed via monacoEditor.onDidChangeModelContent callback, not onChange property
-  const queryRef = useRef<MySQLQuery>(query);
+  const queryRef = useRef<SQLQuery>(query);
   useEffect(() => {
     queryRef.current = query;
   }, [query]);

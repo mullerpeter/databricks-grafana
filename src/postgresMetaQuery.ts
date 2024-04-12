@@ -1,22 +1,5 @@
-export function getVersion() {
-  return "SELECT current_setting('server_version_num')::int/100 as version";
-}
-
-export function getTimescaleDBVersion() {
-  return "SELECT extversion FROM pg_extension WHERE extname = 'timescaledb'";
-}
-
 export function showTables() {
-  return `select quote_ident(table_name) as "table" from information_schema.tables
-    where quote_ident(table_schema) not in ('information_schema',
-                             'pg_catalog',
-                             '_timescaledb_cache',
-                             '_timescaledb_catalog',
-                             '_timescaledb_internal',
-                             '_timescaledb_config',
-                             'timescaledb_information',
-                             'timescaledb_experimental')
-      and ${buildSchemaConstraint()}`;
+  return `SHOW TABLES in samples.tpch`;
 }
 
 export function getSchema(table: string) {
@@ -24,10 +7,7 @@ export function getSchema(table: string) {
   // in the table-name
   const tableNamePart = "'" + table.replace(/'/g, "''") + "'";
 
-  return `select quote_ident(column_name) as "column", data_type as "type"
-    from information_schema.columns
-    where quote_ident(table_name) = ${tableNamePart};
-    `;
+  return `DESCRIBE TABLE ${tableNamePart}`;
 }
 
 function buildSchemaConstraint() {

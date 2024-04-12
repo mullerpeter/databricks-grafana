@@ -117,7 +117,13 @@ export abstract class SqlDatasource extends DataSourceWithBackend<SQLQuery, SQLO
   }
 
   applyTemplateVariables(target: SQLQuery, scopedVars: ScopedVars) {
+    // Migrate old format to new format, to support legacy queries.
+    if (target.rawSql === undefined && target.rawSqlQuery !== undefined) {
+        target.rawSql = target.rawSqlQuery;
+        target.rawSqlQuery = undefined;
+    }
     return {
+      ...target,
       refId: target.refId,
       datasource: this.getRef(),
       rawSql: this.templateSrv.replace(target.rawSql, scopedVars, this.interpolateVariable),

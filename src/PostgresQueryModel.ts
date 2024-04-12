@@ -1,37 +1,14 @@
-import {DataQuery, ScopedVars} from '@grafana/data';
+import { ScopedVars } from '@grafana/data';
 import { TemplateSrv } from '@grafana/runtime';
 import { VariableFormatID } from '@grafana/schema';
-import {SQLQuery, SqlQueryModel, applyQueryDefaults, QueryFormat, SQLExpression} from 'components/grafana-sql/src';
-import {EditorMode} from "@grafana/experimental";
-
-interface QuerySettings {
-  convertLongToWide: boolean
-  fillMode?: number
-  fillValue?: number
-}
-
-export interface MySQLQuery extends SQLQuery {
-  alias?: string;
-  format?: QueryFormat;
-  rawSql?: string;
-  dataset?: string;
-  table?: string;
-  sql?: SQLExpression;
-  editorMode?: EditorMode;
-  rawQuery?: boolean;
-  rawSqlQuery?: string;
-  querySettings?: QuerySettings;
-}
+import {SQLQuery, SqlQueryModel, applyQueryDefaults} from 'components/grafana-sql/src';
 
 export class PostgresQueryModel implements SqlQueryModel {
-  target: MySQLQuery;
+  target: SQLQuery;
   templateSrv?: TemplateSrv;
   scopedVars?: ScopedVars;
 
-  constructor(target?: MySQLQuery, templateSrv?: TemplateSrv, scopedVars?: ScopedVars) {
-    if (target?.rawSqlQuery) {
-        target.rawSql = target.rawSqlQuery;
-    }
+  constructor(target?: SQLQuery, templateSrv?: TemplateSrv, scopedVars?: ScopedVars) {
     this.target = applyQueryDefaults(target || { refId: 'A' });
     this.templateSrv = templateSrv;
     this.scopedVars = scopedVars;

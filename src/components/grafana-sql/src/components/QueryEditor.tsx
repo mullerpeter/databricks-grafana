@@ -7,15 +7,14 @@ import { Space } from '@grafana/ui';
 
 import { SqlDatasource } from '../datasource/SqlDatasource';
 import { applyQueryDefaults } from '../defaults';
-import { QueryRowFilter, SQLOptions } from '../types';
+import {QueryRowFilter, SQLOptions, SQLQuery} from '../types';
 import { haveColumns } from '../utils/sql.utils';
 
 import { QueryHeader, QueryHeaderProps } from './QueryHeader';
 import { RawEditor } from './query-editor-raw/RawEditor';
 import { VisualEditor } from './visual-query-builder/VisualEditor';
-import {MySQLQuery} from "../../../../PostgresQueryModel";
 
-interface SqlQueryEditorProps extends QueryEditorProps<SqlDatasource, MySQLQuery, SQLOptions> {
+interface SqlQueryEditorProps extends QueryEditorProps<SqlDatasource, SQLQuery, SQLOptions> {
   queryHeaderProps?: Pick<QueryHeaderProps, 'dialect'>;
 }
 
@@ -58,7 +57,7 @@ export function SqlQueryEditor({
   }, [datasource]);
 
   const processQuery = useCallback(
-    (q: MySQLQuery) => {
+    (q: SQLQuery) => {
       if (isQueryValid(q) && onRunQuery) {
         onRunQuery();
       }
@@ -66,7 +65,7 @@ export function SqlQueryEditor({
     [onRunQuery]
   );
 
-  const onQueryChange = (q: MySQLQuery, process = true) => {
+  const onQueryChange = (q: SQLQuery, process = true) => {
     setQueryToValidate(q);
     onChange(q);
 
@@ -79,7 +78,7 @@ export function SqlQueryEditor({
     }
   };
 
-  const onQueryHeaderChange = (q: MySQLQuery) => {
+  const onQueryHeaderChange = (q: SQLQuery) => {
     setQueryToValidate(q);
     onChange(q);
   };
@@ -108,7 +107,7 @@ export function SqlQueryEditor({
         <VisualEditor
           db={db}
           query={queryWithDefaults}
-          onChange={(q: MySQLQuery) => onQueryChange(q, false)}
+          onChange={(q: SQLQuery) => onQueryChange(q, false)}
           queryRowFilter={queryRowFilter}
           onValidate={setIsQueryRunnable}
           range={range}
@@ -130,6 +129,6 @@ export function SqlQueryEditor({
   );
 }
 
-const isQueryValid = (q: MySQLQuery) => {
+const isQueryValid = (q: SQLQuery) => {
   return Boolean(q.rawSql);
 };

@@ -1,13 +1,13 @@
-import { DataSourceInstanceSettings, ScopedVars } from '@grafana/data';
-import { LanguageDefinition } from '@grafana/experimental';
-import { TemplateSrv } from '@grafana/runtime';
-import { SqlDatasource, DB, SQLSelectableValue, formatSQL } from 'components/grafana-sql/src';
+import {DataSourceInstanceSettings, ScopedVars} from '@grafana/data';
+import {LanguageDefinition} from '@grafana/experimental';
+import {TemplateSrv} from '@grafana/runtime';
+import {DB, formatSQL, SqlDatasource, SQLQuery, SQLSelectableValue} from 'components/grafana-sql/src';
 
-import {MySQLQuery, PostgresQueryModel} from './PostgresQueryModel';
-import { getSchema, getTimescaleDBVersion, getVersion, showTables } from './postgresMetaQuery';
-import { fetchColumns, fetchTables, getSqlCompletionProvider } from './sqlCompletionProvider';
-import { getFieldConfig, toRawSql } from './sqlUtil';
-import { PostgresOptions } from './types';
+import {PostgresQueryModel} from './PostgresQueryModel';
+import {getSchema} from './postgresMetaQuery';
+import {fetchColumns, fetchTables, getSqlCompletionProvider} from './sqlCompletionProvider';
+import {getFieldConfig, toRawSql} from './sqlUtil';
+import {PostgresOptions} from './types';
 
 export class PostgresDatasource extends SqlDatasource {
   sqlLanguageDefinition: LanguageDefinition | undefined = undefined;
@@ -16,35 +16,16 @@ export class PostgresDatasource extends SqlDatasource {
     super(instanceSettings);
   }
 
-  getQueryModel(target?: MySQLQuery, templateSrv?: TemplateSrv, scopedVars?: ScopedVars): PostgresQueryModel {
+  getQueryModel(target?: SQLQuery, templateSrv?: TemplateSrv, scopedVars?: ScopedVars): PostgresQueryModel {
     return new PostgresQueryModel(target, templateSrv, scopedVars);
   }
 
-  async getVersion(): Promise<string> {
-    const value = await this.runSql<{ version: number }>(getVersion());
-    const results = value.fields.version?.values;
-
-    if (!results) {
-      return '';
-    }
-
-    return results[0].toString();
+  async fetchTables(dataset: string): Promise<string[]> {
+    return await this.postResource("tables", {catalog: 'samples', schema: dataset})
   }
 
-  async getTimescaleDBVersion(): Promise<string | undefined> {
-    const value = await this.runSql<{ extversion: string }>(getTimescaleDBVersion());
-    const results = value.fields.extversion?.values;
-
-    if (!results) {
-      return undefined;
-    }
-
-    return results[0];
-  }
-
-  async fetchTables(): Promise<string[]> {
-    const tables = await this.runSql<{ table: string[] }>(showTables(), { refId: 'tables' });
-    return tables.fields.table?.values.flat() ?? [];
+  async fetchSchemas(): Promise<string[]> {
+    return await this.postResource("schemas", {catalog: 'samples'})
   }
 
   getSqlLanguageDefinition(db: DB): LanguageDefinition {
@@ -53,28 +34,23 @@ export class PostgresDatasource extends SqlDatasource {
     }
 
     const args = {
-      getColumns: { current: (query: MySQLQuery) => fetchColumns(db, query) },
-      getTables: { current: () => fetchTables(db) },
+      getColumns: { current: (query: SQLQuery) => fetchColumns(db, query) },
+      getTables: { current: (query: SQLQuery) => fetchTables(db, query) },
     };
     this.sqlLanguageDefinition = {
-      id: 'pgsql',
+      id: 'sql',
       completionProvider: getSqlCompletionProvider(args),
       formatter: formatSQL,
     };
     return this.sqlLanguageDefinition;
   }
 
-  async fetchFields(query: MySQLQuery): Promise<SQLSelectableValue[]> {
-    const { table } = query;
-    if (table === undefined) {
-      // if no table-name, we are not able to query for fields
-      return [];
-    }
-    const schema = await this.runSql<{ column: string; type: string }>(getSchema(table), { refId: 'columns' });
+  async fetchFields(table: string, schema: string): Promise<SQLSelectableValue[]> {
+    const response: any = await this.postResource("columns", {table: "samples." + schema + "." + table});
     const result: SQLSelectableValue[] = [];
-    for (let i = 0; i < schema.length; i++) {
-      const column = schema.fields.column.values[i];
-      const type = schema.fields.type.values[i];
+    for (let i = 0; i < response.length; i++) {
+      const column = response[i].name;
+      const type = response[i].type;
       result.push({ label: column, value: column, type, ...getFieldConfig(type) });
     }
     return result;
@@ -87,21 +63,26 @@ export class PostgresDatasource extends SqlDatasource {
 
     return {
       init: () => Promise.resolve(true),
-      datasets: () => Promise.resolve([]),
-      tables: () => this.fetchTables(),
-      getEditorLanguageDefinition: () => this.getSqlLanguageDefinition(this.db),
-      fields: async (query: MySQLQuery) => {
-        if (!query?.table) {
+      datasets: () => this.fetchSchemas(),
+      tables: async (dataset?: string | undefined) => {
+        if (!dataset) {
           return [];
         }
-        return this.fetchFields(query);
+        return this.fetchTables(dataset);
+      },
+      getEditorLanguageDefinition: () => this.getSqlLanguageDefinition(this.db),
+      fields: async (query: SQLQuery) => {
+        if (!query?.table || !query?.dataset) {
+          return [];
+        }
+        return this.fetchFields(query.table, query.dataset);
       },
       validateQuery: (query) =>
         Promise.resolve({ isError: false, isValid: true, query, error: '', rawSql: query.rawSql }),
       dsID: () => this.id,
       toRawSql,
       lookup: async () => {
-        const tables = await this.fetchTables();
+        const tables = await this.fetchTables('tpch');
         return tables.map((t) => ({ name: t, completion: t }));
       },
     };

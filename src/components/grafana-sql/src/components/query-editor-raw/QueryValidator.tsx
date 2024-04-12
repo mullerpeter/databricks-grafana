@@ -6,12 +6,11 @@ import useDebounce from 'react-use/lib/useDebounce';
 import { formattedValueToString, getValueFormat, TimeRange } from '@grafana/data';
 import { Icon, Spinner, useTheme2 } from '@grafana/ui';
 
-import { DB, ValidationResults } from '../../types';
-import {MySQLQuery} from "../../../../../PostgresQueryModel";
+import {DB, SQLQuery, ValidationResults} from '../../types';
 
 export interface QueryValidatorProps {
   db: DB;
-  query: MySQLQuery;
+  query: SQLQuery;
   range?: TimeRange;
   onValidate: (isValid: boolean) => void;
 }
@@ -38,7 +37,7 @@ export function QueryValidator({ db, query, onValidate, range }: QueryValidatorP
   }, [theme]);
 
   const [state, validateQuery] = useAsyncFn(
-    async (q: MySQLQuery) => {
+    async (q: SQLQuery) => {
       if (q.rawSql?.trim() === '') {
         return null;
       }
