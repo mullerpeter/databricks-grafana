@@ -1,64 +1,109 @@
-import {DataFrame, DataQueryRequest, DataSourceInstanceSettings, MetricFindValue, ScopedVars} from '@grafana/data';
-import {DataSourceWithBackend, getTemplateSrv} from '@grafana/runtime';
-import {MyDataSourceOptions, MyQuery} from './types';
-import {switchMap} from 'rxjs/operators';
-import {firstValueFrom} from 'rxjs';
-import {QuerySuggestions} from "./components/Suggestions/QuerySuggestions";
+import { DataSourceInstanceSettings, ScopedVars } from '@grafana/data';
+import { LanguageDefinition } from '@grafana/experimental';
+import { TemplateSrv } from '@grafana/runtime';
+import { SqlDatasource, DB, SQLSelectableValue, formatSQL } from 'components/grafana-sql/src';
 
-export class DataSource extends DataSourceWithBackend<MyQuery, MyDataSourceOptions> {
-    public suggestionProvider: QuerySuggestions;
-    public autoCompletionEnabled: boolean;
-    constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>) {
-        super(instanceSettings);
-        this.annotations = {}
-        this.suggestionProvider = new QuerySuggestions(this);
-        this.autoCompletionEnabled = instanceSettings.jsonData.autoCompletion || false;
+import {MySQLQuery, PostgresQueryModel} from './PostgresQueryModel';
+import { getSchema, getTimescaleDBVersion, getVersion, showTables } from './postgresMetaQuery';
+import { fetchColumns, fetchTables, getSqlCompletionProvider } from './sqlCompletionProvider';
+import { getFieldConfig, toRawSql } from './sqlUtil';
+import { PostgresOptions } from './types';
+
+export class PostgresDatasource extends SqlDatasource {
+  sqlLanguageDefinition: LanguageDefinition | undefined = undefined;
+
+  constructor(instanceSettings: DataSourceInstanceSettings<PostgresOptions>) {
+    super(instanceSettings);
+  }
+
+  getQueryModel(target?: MySQLQuery, templateSrv?: TemplateSrv, scopedVars?: ScopedVars): PostgresQueryModel {
+    return new PostgresQueryModel(target, templateSrv, scopedVars);
+  }
+
+  async getVersion(): Promise<string> {
+    const value = await this.runSql<{ version: number }>(getVersion());
+    const results = value.fields.version?.values;
+
+    if (!results) {
+      return '';
     }
 
-    applyTemplateVariables(query: MyQuery, scopedVars: ScopedVars) {
-        const templateSrv = getTemplateSrv();
-        return {
-            ...query,
-            rawSqlQuery: query.rawSqlQuery ? templateSrv.replace(query.rawSqlQuery, scopedVars) : ''
-        };
+    return results[0].toString();
+  }
+
+  async getTimescaleDBVersion(): Promise<string | undefined> {
+    const value = await this.runSql<{ extversion: string }>(getTimescaleDBVersion());
+    const results = value.fields.extversion?.values;
+
+    if (!results) {
+      return undefined;
     }
 
-    async metricFindQuery(queryText: string, options?: any): Promise<MetricFindValue[]> {
-        if (!queryText) {
-            return Promise.resolve([]);
+    return results[0];
+  }
+
+  async fetchTables(): Promise<string[]> {
+    const tables = await this.runSql<{ table: string[] }>(showTables(), { refId: 'tables' });
+    return tables.fields.table?.values.flat() ?? [];
+  }
+
+  getSqlLanguageDefinition(db: DB): LanguageDefinition {
+    if (this.sqlLanguageDefinition !== undefined) {
+      return this.sqlLanguageDefinition;
+    }
+
+    const args = {
+      getColumns: { current: (query: MySQLQuery) => fetchColumns(db, query) },
+      getTables: { current: () => fetchTables(db) },
+    };
+    this.sqlLanguageDefinition = {
+      id: 'pgsql',
+      completionProvider: getSqlCompletionProvider(args),
+      formatter: formatSQL,
+    };
+    return this.sqlLanguageDefinition;
+  }
+
+  async fetchFields(query: MySQLQuery): Promise<SQLSelectableValue[]> {
+    const { table } = query;
+    if (table === undefined) {
+      // if no table-name, we are not able to query for fields
+      return [];
+    }
+    const schema = await this.runSql<{ column: string; type: string }>(getSchema(table), { refId: 'columns' });
+    const result: SQLSelectableValue[] = [];
+    for (let i = 0; i < schema.length; i++) {
+      const column = schema.fields.column.values[i];
+      const type = schema.fields.type.values[i];
+      result.push({ label: column, value: column, type, ...getFieldConfig(type) });
+    }
+    return result;
+  }
+
+  getDB(): DB {
+    if (this.db !== undefined) {
+      return this.db;
+    }
+
+    return {
+      init: () => Promise.resolve(true),
+      datasets: () => Promise.resolve([]),
+      tables: () => this.fetchTables(),
+      getEditorLanguageDefinition: () => this.getSqlLanguageDefinition(this.db),
+      fields: async (query: MySQLQuery) => {
+        if (!query?.table) {
+          return [];
         }
-
-        return firstValueFrom(this.query({
-            targets: [
-                {
-                    rawSqlQuery: getTemplateSrv().replace(queryText, options.scopedVars),
-                    refId: 'metricFindQuery'
-                },
-            ],
-            maxDataPoints: 0,
-        } as DataQueryRequest<MyQuery>)
-            .pipe(
-                switchMap((response) => {
-                    if (response.error) {
-                        console.log('Error: ' + response.error.message);
-                        throw new Error(response.error.message);
-                    }
-                    return response.data;
-                }),
-                switchMap((data: DataFrame) => {
-                    if (data.fields.length === 0) {
-                        return [];
-                    } else if (data.fields.length === 1) {
-                        return [data.fields[0].values.toArray().map((v, i)=>{
-                            return {text: v}
-                        })];
-                    } else {
-                        return [data.fields[0].values.toArray().map((v, i)=>{
-                            return {text: data.fields[1].values.toArray()[i], value: v}
-                        })];
-                    }
-                })
-            ));
-    }
-
+        return this.fetchFields(query);
+      },
+      validateQuery: (query) =>
+        Promise.resolve({ isError: false, isValid: true, query, error: '', rawSql: query.rawSql }),
+      dsID: () => this.id,
+      toRawSql,
+      lookup: async () => {
+        const tables = await this.fetchTables();
+        return tables.map((t) => ({ name: t, completion: t }));
+      },
+    };
+  }
 }
