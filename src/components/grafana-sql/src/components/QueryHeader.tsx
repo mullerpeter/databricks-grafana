@@ -11,9 +11,10 @@ import { QueryWithDefaults } from '../defaults';
 import {QueryFormat, QueryRowFilter, QUERY_FORMAT_OPTIONS, DB, SQLDialect, SQLQuery} from '../types';
 
 import { ConfirmModal } from './ConfirmModal';
-import { DatasetSelector } from './DatasetSelector';
+import { SchemaSelector } from './SchemaSelector';
 import { isSqlDatasourceDatabaseSelectionFeatureFlagEnabled } from './QueryEditorFeatureFlag.utils';
 import { TableSelector } from './TableSelector';
+import {CatalogSelector} from "./CatalogSelector";
 
 export interface QueryHeaderProps {
   db: DB;
@@ -22,7 +23,8 @@ export interface QueryHeaderProps {
   onChange: (query: SQLQuery) => void;
   onQueryRowChange: (queryRowFilter: QueryRowFilter) => void;
   onRunQuery: () => void;
-  preconfiguredDataset: string;
+  preconfiguredCatalog: string | undefined;
+  preconfiguredSchema: string | undefined;
   query: QueryWithDefaults;
   queryRowFilter: QueryRowFilter;
 }
@@ -39,7 +41,8 @@ export function QueryHeader({
   onChange,
   onQueryRowChange,
   onRunQuery,
-  preconfiguredDataset,
+  preconfiguredCatalog,
+  preconfiguredSchema,
   query,
   queryRowFilter,
 }: QueryHeaderProps) {
@@ -76,15 +79,32 @@ export function QueryHeader({
     onChange(next);
   };
 
-  const onDatasetChange = (e: SelectableValue) => {
-    if (e.value === query.dataset) {
+  const onSchemaChange = (e: SelectableValue) => {
+    if (e.value === query.schema) {
       return;
     }
 
     const next = {
       ...query,
-      dataset: e.value,
+      schema: e.value,
       table: undefined,
+      sql: undefined,
+      rawSql: '',
+    };
+
+    onChange(next);
+  };
+
+  const onCatalogChange = (e: SelectableValue) => {
+    if (e.value === query.catalog) {
+      return;
+    }
+
+    const next = {
+      ...query,
+      catalog: e.value,
+      table: undefined,
+      schema: undefined,
       sql: undefined,
       rawSql: '',
     };
@@ -107,7 +127,7 @@ export function QueryHeader({
     onChange(next);
   };
 
-  const datasetDropdownIsAvailable = () => {
+  const catalogDropdownIsAvailable = () => {
     if (dialect === 'influx') {
       return false;
     }
@@ -288,21 +308,32 @@ export function QueryHeader({
         <>
           <Space v={0.5} />
           <EditorRow>
-            {datasetDropdownIsAvailable() && (
-              <EditorField label="Dataset" width={25}>
-                <DatasetSelector
+            {catalogDropdownIsAvailable() && (
+              <EditorField label="Catalog" width={25}>
+                <CatalogSelector
                   db={db}
-                  dataset={query.dataset}
+                  catalog={query.catalog}
                   dialect={dialect}
-                  preconfiguredDataset={preconfiguredDataset}
-                  onChange={onDatasetChange}
+                  preconfiguredCatalog={preconfiguredCatalog}
+                  onChange={onCatalogChange}
                 />
               </EditorField>
             )}
+            <EditorField label="Schema" width={25}>
+              <SchemaSelector
+                  db={db}
+                  catalog={query.catalog || preconfiguredCatalog}
+                  schema={query.schema}
+                  dialect={dialect}
+                  preconfiguredSchema={preconfiguredSchema}
+                  onChange={onSchemaChange}
+              />
+            </EditorField>
             <EditorField label="Table" width={25}>
               <TableSelector
                 db={db}
-                dataset={query.dataset || preconfiguredDataset}
+                catalog={query.catalog || preconfiguredCatalog}
+                schema={query.schema}
                 table={query.table}
                 onChange={onTableChange}
               />

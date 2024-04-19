@@ -23,7 +23,6 @@ export function applyQueryDefaults(q?: SQLQuery): SQLQuery {
     format: q?.format !== undefined ? q.format : QueryFormat.Table,
     rawSql: q?.rawSql || '',
     rawSqlQuery: q?.rawSqlQuery,
-    querySettings: q?.querySettings,
     editorMode,
     sql: q?.sql ?? {
       columns: [createFunctionField()],

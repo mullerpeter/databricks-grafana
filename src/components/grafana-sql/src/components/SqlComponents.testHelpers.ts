@@ -2,7 +2,7 @@ import { TimeRange, PluginType } from '@grafana/data';
 
 import { DB, SQLQuery, SQLSelectableValue, ValidationResults } from '../types';
 
-import { DatasetSelectorProps } from './DatasetSelector';
+import { DatasetSelectorProps } from './SchemaSelector';
 import { TableSelectorProps } from './TableSelector';
 
 const buildMockDB = (): DB => ({
@@ -75,7 +75,7 @@ export const buildMockDatasource = (hasDefaultDatabaseConfigured?: boolean) => {
 export function buildMockDatasetSelectorProps(overrides?: Partial<DatasetSelectorProps>): DatasetSelectorProps {
   return {
     db: buildMockDB(),
-    dataset: '',
+    catalog: '',
     dialect: 'other',
     onChange: jest.fn(),
     preconfiguredDataset: '',
@@ -86,7 +86,7 @@ export function buildMockDatasetSelectorProps(overrides?: Partial<DatasetSelecto
 export function buildMockTableSelectorProps(overrides?: Partial<TableSelectorProps>): TableSelectorProps {
   return {
     db: buildMockDB(),
-    dataset: '',
+    catalog: '',
     table: '',
     onChange: jest.fn(),
     ...overrides,

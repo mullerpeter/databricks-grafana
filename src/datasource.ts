@@ -4,7 +4,6 @@ import {TemplateSrv} from '@grafana/runtime';
 import {DB, formatSQL, SqlDatasource, SQLQuery, SQLSelectableValue} from 'components/grafana-sql/src';
 
 import {PostgresQueryModel} from './PostgresQueryModel';
-import {getSchema} from './postgresMetaQuery';
 import {fetchColumns, fetchTables, getSqlCompletionProvider} from './sqlCompletionProvider';
 import {getFieldConfig, toRawSql} from './sqlUtil';
 import {PostgresOptions} from './types';
@@ -14,18 +13,29 @@ export class PostgresDatasource extends SqlDatasource {
 
   constructor(instanceSettings: DataSourceInstanceSettings<PostgresOptions>) {
     super(instanceSettings);
+    // this.setDefaults();
   }
 
   getQueryModel(target?: SQLQuery, templateSrv?: TemplateSrv, scopedVars?: ScopedVars): PostgresQueryModel {
     return new PostgresQueryModel(target, templateSrv, scopedVars);
   }
 
-  async fetchTables(dataset: string): Promise<string[]> {
-    return await this.postResource("tables", {catalog: 'samples', schema: dataset})
+  async setDefaults(): Promise<void> {
+    const defaults: any = await this.postResource("defaults", {})
+    this.defaultCatalog = defaults.defaultCatalog;
+    this.defaultSchema = defaults.defaultSchema;
   }
 
-  async fetchSchemas(): Promise<string[]> {
-    return await this.postResource("schemas", {catalog: 'samples'})
+  async fetchTables(catalog: string, schema: string): Promise<string[]> {
+    return await this.postResource("tables", {catalog: catalog, schema: schema})
+  }
+
+  async fetchSchemas(catalog: string): Promise<string[]> {
+    return await this.postResource("schemas", {catalog: catalog})
+  }
+
+  async fetchCatalogs(): Promise<string[]> {
+    return await this.postResource("catalogs", {})
   }
 
   getSqlLanguageDefinition(db: DB): LanguageDefinition {
@@ -45,8 +55,8 @@ export class PostgresDatasource extends SqlDatasource {
     return this.sqlLanguageDefinition;
   }
 
-  async fetchFields(table: string, schema: string): Promise<SQLSelectableValue[]> {
-    const response: any = await this.postResource("columns", {table: "samples." + schema + "." + table});
+  async fetchFields(table: string, schema: string, catalog: string): Promise<SQLSelectableValue[]> {
+    const response: any = await this.postResource("columns", {table: catalog + "." + schema + "." + table});
     const result: SQLSelectableValue[] = [];
     for (let i = 0; i < response.length; i++) {
       const column = response[i].name;
@@ -63,27 +73,33 @@ export class PostgresDatasource extends SqlDatasource {
 
     return {
       init: () => Promise.resolve(true),
-      datasets: () => this.fetchSchemas(),
-      tables: async (dataset?: string | undefined) => {
-        if (!dataset) {
+      catalogs: () => this.fetchCatalogs(),
+      schemas: async (catalog) => {
+          if (!catalog) {
+          return [];
+          }
+          return this.fetchSchemas(catalog);
+      },
+      tables: async (catalog, schema) => {
+        if (!catalog || !schema) {
           return [];
         }
-        return this.fetchTables(dataset);
+        return this.fetchTables(catalog, schema);
       },
       getEditorLanguageDefinition: () => this.getSqlLanguageDefinition(this.db),
       fields: async (query: SQLQuery) => {
-        if (!query?.table || !query?.dataset) {
+        if (!query?.table || !query?.catalog || !query?.schema) {
           return [];
         }
-        return this.fetchFields(query.table, query.dataset);
+        return this.fetchFields(query.table, query.schema, query.catalog);
       },
       validateQuery: (query) =>
         Promise.resolve({ isError: false, isValid: true, query, error: '', rawSql: query.rawSql }),
       dsID: () => this.id,
       toRawSql,
       lookup: async () => {
-        const tables = await this.fetchTables('tpch');
-        return tables.map((t) => ({ name: t, completion: t }));
+        const catalogs = await this.fetchCatalogs();
+        return catalogs.map((t) => ({ name: t, completion: t }));
       },
     };
   }

@@ -44,6 +44,8 @@ export abstract class SqlDatasource extends DataSourceWithBackend<SQLQuery, SQLO
   interval: string;
   db: DB;
   preconfiguredDatabase: string;
+  defaultCatalog: string | undefined;
+  defaultSchema: string | undefined;
 
   constructor(
     instanceSettings: DataSourceInstanceSettings<SQLOptions>,
@@ -56,6 +58,8 @@ export abstract class SqlDatasource extends DataSourceWithBackend<SQLQuery, SQLO
     const settingsData = instanceSettings.jsonData || {};
     this.interval = settingsData.timeInterval || '1m';
     this.db = this.getDB();
+    this.defaultSchema = undefined;
+    this.defaultCatalog = undefined;
     /*
       The `settingsData.database` will be defined if a default database has been defined in either
       1) the ConfigurationEditor.tsx, OR 2) the provisioning config file, either under `jsondata.database`, or simply `database`.
@@ -176,7 +180,7 @@ export abstract class SqlDatasource extends DataSourceWithBackend<SQLQuery, SQLO
       if (!!this.preconfiguredDatabase) {
         for (const target of request.targets) {
           // Test for database configuration change only if query was made in `builder` mode.
-          if (target.editorMode === EditorMode.Builder && target.dataset !== this.preconfiguredDatabase) {
+          if (target.editorMode === EditorMode.Builder && target.catalog !== this.preconfiguredDatabase) {
             return `The configuration for this panel's data source has been modified. The previous database used in this panel's
                    saved query is no longer available. Please update the query to use the new database option.
                    Previous query parameters will be preserved until the query is updated.`;

@@ -29,7 +29,7 @@ export function SqlQueryEditor({
   const [isQueryRunnable, setIsQueryRunnable] = useState(true);
   const db = datasource.getDB();
 
-  const { preconfiguredDatabase } = datasource;
+  const { defaultSchema, defaultCatalog } = datasource;
   const dialect = queryHeaderProps?.dialect ?? 'other';
   const { loading, error } = useAsync(async () => {
     return () => {
@@ -91,7 +91,8 @@ export function SqlQueryEditor({
     <>
       <QueryHeader
         db={db}
-        preconfiguredDataset={preconfiguredDatabase}
+        preconfiguredCatalog={defaultCatalog}
+        preconfiguredSchema={defaultSchema}
         onChange={onQueryHeaderChange}
         onRunQuery={onRunQuery}
         onQueryRowChange={setQueryRowFilter}

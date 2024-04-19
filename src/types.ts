@@ -1,3 +1,4 @@
+import { SQLOptions } from 'components/grafana-sql/src';
 import {DataQuery, DataSourceJsonData} from '@grafana/data';
 
 interface QuerySettings {
@@ -54,4 +55,19 @@ export interface Suggestions {
   schemas: string[]
   tables: string[]
   columns: Column[]
+}
+
+export interface MyDataSourceOptions extends DataSourceJsonData {
+  hostname?: string;
+  port?: string;
+  path?: string;
+  connMaxIdleTime?: number;
+  autoCompletion?: boolean;
+}
+
+/**
+ * Value that is used in the backend, but never sent over HTTP to the frontend
+ */
+export interface MySecureJsonData {
+  token?: string;
 }

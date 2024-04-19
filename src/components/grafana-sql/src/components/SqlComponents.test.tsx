@@ -6,7 +6,7 @@ import { config } from '@grafana/runtime';
 import { SQLExpression } from '../types';
 import { makeVariable } from '../utils/testHelpers';
 
-import { DatasetSelector } from './DatasetSelector';
+import { SchemaSelector } from './SchemaSelector';
 import { buildMockDatasetSelectorProps, buildMockTableSelectorProps } from './SqlComponents.testHelpers';
 import { TableSelector } from './TableSelector';
 import { removeQuotesForMultiVariables } from './visual-query-builder/SQLWhereRow';
@@ -22,7 +22,7 @@ afterEach(() => {
 describe('DatasetSelector', () => {
   it('should only query the database when needed', async () => {
     const mockProps = buildMockDatasetSelectorProps();
-    render(<DatasetSelector {...mockProps} />);
+    render(<SchemaSelector {...mockProps} />);
 
     await waitFor(() => {
       expect(mockProps.db.datasets).toHaveBeenCalled();
@@ -31,7 +31,7 @@ describe('DatasetSelector', () => {
 
   it('should not query the database if Postgres instance, and no preconfigured database', async () => {
     const mockProps = buildMockDatasetSelectorProps({ dialect: 'postgres' });
-    render(<DatasetSelector {...mockProps} />);
+    render(<SchemaSelector {...mockProps} />);
 
     await waitFor(() => {
       expect(mockProps.db.datasets).not.toHaveBeenCalled();
@@ -40,7 +40,7 @@ describe('DatasetSelector', () => {
 
   it('should not query the database if preconfigured', async () => {
     const mockProps = buildMockDatasetSelectorProps({ preconfiguredDataset: 'database 1' });
-    render(<DatasetSelector {...mockProps} />);
+    render(<SchemaSelector {...mockProps} />);
 
     await waitFor(() => {
       expect(mockProps.db.datasets).not.toHaveBeenCalled();
@@ -50,7 +50,7 @@ describe('DatasetSelector', () => {
 
 describe('TableSelector', () => {
   it('should only query the database when needed', async () => {
-    const mockProps = buildMockTableSelectorProps({ dataset: 'database 1' });
+    const mockProps = buildMockTableSelectorProps({ catalog: 'database 1' });
     render(<TableSelector {...mockProps} />);
 
     await waitFor(() => {

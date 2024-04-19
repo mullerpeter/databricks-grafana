@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import { useAsync } from 'react-use';
 
 import { SelectableValue, toOption } from '@grafana/data';
@@ -9,20 +9,36 @@ import { DB, ResourceSelectorProps } from '../types';
 export interface TableSelectorProps extends ResourceSelectorProps {
   db: DB;
   table: string | undefined;
-  dataset: string | undefined;
+  catalog: string | undefined;
+  schema: string | undefined;
   onChange: (v: SelectableValue) => void;
 }
 
-export const TableSelector = ({ db, dataset, table, className, onChange }: TableSelectorProps) => {
+export const TableSelector = ({ db, catalog, schema, table, className, onChange }: TableSelectorProps) => {
   const state = useAsync(async () => {
     // No need to attempt to fetch tables for an unknown dataset.
-    if (!dataset) {
+    if (!catalog || !schema) {
       return [];
     }
 
-    const tables = await db.tables(dataset);
+    const tables = await db.tables(catalog, schema);
     return tables.map(toOption);
-  }, [dataset]);
+  }, [catalog, schema]);
+
+  useEffect(() => {
+    if (!table) {
+      if (state.value && state.value[0]) {
+        onChange(state.value[0]);
+      }
+    } else {
+      if (state.value && state.value.find((v) => v.value === table) === undefined) {
+        // if value is set and newly fetched values does not contain selected value
+        if (state.value.length > 0) {
+          onChange(state.value[0]);
+        }
+      }
+    }
+  }, [state.value, onChange]);
 
   return (
     <Select
