@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.2.4
+## 1.2.5
+
+- Fix: Add support for milliseconds in time window interval
+
+---
+
+### 1.2.4
 
 - Chore: Upgrade go & npm dependencies to latest versions
 - Refactor: SetConnMaxIdleTime to 6 hours on Databricks Connection Refresh
