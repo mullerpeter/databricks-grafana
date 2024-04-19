@@ -14,6 +14,7 @@ func getIntervalString(duration time.Duration) string {
 	hours := int(math.Floor(duration.Hours()))
 	minutes := int(math.Floor(duration.Minutes()))
 	seconds := int(math.Floor(duration.Seconds()))
+	milliseconds := int(duration.Milliseconds())
 
 	returnString := ""
 
@@ -32,6 +33,12 @@ func getIntervalString(duration time.Duration) string {
 	remainingSeconds := seconds - (minutes * 60)
 	if remainingSeconds > 0 {
 		returnString = fmt.Sprintf("%s%s%d SECONDS", returnString, deliminator, remainingSeconds)
+		deliminator = " "
+	}
+
+	remainingMilliseconds := milliseconds - (seconds * 1000)
+	if remainingMilliseconds > 0 {
+		returnString = fmt.Sprintf("%s%s%d MILLISECONDS", returnString, deliminator, remainingMilliseconds)
 		deliminator = " "
 	}
 
