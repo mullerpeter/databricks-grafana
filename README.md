@@ -54,22 +54,24 @@ grafana/grafana
 * Click the `+ Add data source` button in the top header.
 * Select Databricks.
 
-To configure the plugin use the values provided under JDBC/ODBC in the advanced options of the Databricks Cluster (or SQL Warehouse) and create a personal access token for Databricks.
+To configure the plugin use the values provided under JDBC/ODBC in the advanced options of the Databricks Cluster (or SQL Warehouse) and the the Credentials according to the chosen Authentication Method.
+
+You can either authenticate the plugin using a [Personal Access Token (PAT)](https://docs.databricks.com/en/dev-tools/auth/pat.html) or via [M2M OAuth](https://docs.databricks.com/en/dev-tools/auth/oauth-m2m.html) using a Service Principal Client ID and Client Secret.
 
 ![img_1.png](img/config_editor.png)
 
 Available configuration fields are as follows:
 
-| Name                 | Description                                                                                                  |
-|----------------------|--------------------------------------------------------------------------------------------------------------|
-| Server Hostname      | Databricks Server Hostname (without http). i.e. `XXX.cloud.databricks.com`                                   |
-| Server Port          | Databricks Server Port (default `443`)                                                                       |
-| HTTP Path            | HTTP Path value for the existing cluster or SQL warehouse. i.e. `sql/1.0/endpoints/XXX`                      |
-| Authentication Type  | PAT (Personal Access Token) or M2M (Machine to Machine) OAuth Authentication                                 |
-| Client ID            | Databricks Service Principal Client ID. (only if M2M OAuth is chosen as Auth Method)                         |
-| Client Secret        | Databricks Service Principal Client Secret. (only if M2M OAuth is chosen as Auth Method)                     |
-| Access Token         | Personal Access Token for Databricks. (only if PAT is chosen as Auth Method)                                 |
-| Code Auto Completion | If enabled the SQL editor will fetch catalogs/schemas/tables/columns from Databricks to provide suggestions. |
+| Name                  | Description                                                                                                  |
+|-----------------------|--------------------------------------------------------------------------------------------------------------|
+| Server Hostname       | Databricks Server Hostname (without http). i.e. `XXX.cloud.databricks.com`                                   |
+| Server Port           | Databricks Server Port (default `443`)                                                                       |
+| HTTP Path             | HTTP Path value for the existing cluster or SQL warehouse. i.e. `sql/1.0/endpoints/XXX`                      |
+| Authentication Method | PAT (Personal Access Token) or M2M (Machine to Machine) OAuth Authentication                                 |
+| Client ID             | Databricks Service Principal Client ID. (only if M2M OAuth is chosen as Auth Method)                         |
+| Client Secret         | Databricks Service Principal Client Secret. (only if M2M OAuth is chosen as Auth Method)                     |
+| Access Token          | Personal Access Token for Databricks. (only if PAT is chosen as Auth Method)                                 |
+| Code Auto Completion  | If enabled the SQL editor will fetch catalogs/schemas/tables/columns from Databricks to provide suggestions. |
 
 ### Supported Macros
 

@@ -26,7 +26,7 @@ export interface MyDataSourceOptions extends DataSourceJsonData {
   port?: string;
   path?: string;
   autoCompletion?: boolean;
-  connectionMethod?: string;
+  authenticationMethod?: string;
   clientId?: string;
 }
 

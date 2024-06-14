@@ -118,13 +118,13 @@ export class ConfigEditor extends PureComponent<Props, State> {
     });
   };
 
-  onConnectionMethodChange = (value: string | undefined) => {
+  onAuthenticationMethodChange = (value: string | undefined) => {
     const { onOptionsChange, options } = this.props;
     onOptionsChange({
       ...options,
       jsonData: {
         ...options.jsonData,
-        connectionMethod: value,
+        authenticationMethod: value,
       },
     });
   }
@@ -162,10 +162,10 @@ export class ConfigEditor extends PureComponent<Props, State> {
                   onChange={this.onPathChange}
               />
             </InlineField>
-            <InlineField label="Authentication Type" labelWidth={30} tooltip="PAT (Personal Access Token) or M2M (Machine to Machine) OAuth Authentication">
+            <InlineField label="Authentication Method" labelWidth={30} tooltip="PAT (Personal Access Token) or M2M (Machine to Machine) OAuth Authentication">
               <Select
                   onChange={({ value }) => {
-                    this.onConnectionMethodChange(value);
+                    this.onAuthenticationMethodChange(value);
                   }}
                   options={[
                     {
@@ -177,11 +177,11 @@ export class ConfigEditor extends PureComponent<Props, State> {
                       label: 'M2M Oauth',
                     },
                   ]}
-                  value={jsonData.connectionMethod || 'dsn'}
+                  value={jsonData.authenticationMethod || 'dsn'}
                   backspaceRemovesValue
               />
             </InlineField>
-            {jsonData.connectionMethod === 'm2m' ? (
+            {jsonData.authenticationMethod === 'm2m' ? (
                 <>
                   <InlineField label="Client ID" labelWidth={30} tooltip="Databricks Service Principal Client ID">
                     <Input

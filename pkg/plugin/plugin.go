@@ -36,11 +36,11 @@ var (
 )
 
 type DatasourceSettings struct {
-	Path             string `json:"path"`
-	Hostname         string `json:"hostname"`
-	Port             string `json:"port"`
-	ConnectionMethod string `json:"connectionMethod"`
-	ClientId         string `json:"clientId"`
+	Path                 string `json:"path"`
+	Hostname             string `json:"hostname"`
+	Port                 string `json:"port"`
+	AuthenticationMethod string `json:"authenticationMethod"`
+	ClientId             string `json:"clientId"`
 }
 
 // NewSampleDatasource creates a new datasource instance.
@@ -61,7 +61,7 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 		port = portInt
 	}
 
-	if datasourceSettings.ConnectionMethod == "m2m" {
+	if datasourceSettings.AuthenticationMethod == "m2m" {
 		authenticator := m2m.NewAuthenticator(
 			datasourceSettings.ClientId,
 			settings.DecryptedSecureJSONData["clientSecret"],
@@ -93,7 +93,7 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 				databricksDB: databricksDB,
 			}, nil
 		}
-	} else if datasourceSettings.ConnectionMethod == "dsn" || datasourceSettings.ConnectionMethod == "" {
+	} else if datasourceSettings.AuthenticationMethod == "dsn" || datasourceSettings.AuthenticationMethod == "" {
 
 		connector, err := dbsql.NewConnector(
 			dbsql.WithAccessToken(settings.DecryptedSecureJSONData["token"]),
