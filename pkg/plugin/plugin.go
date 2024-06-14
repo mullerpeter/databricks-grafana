@@ -6,7 +6,6 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	_ "github.com/databricks/databricks-sql-go"
 	dbsql "github.com/databricks/databricks-sql-go"
 	"github.com/databricks/databricks-sql-go/auth/oauth/m2m"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
@@ -62,8 +61,6 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 		port = portInt
 	}
 
-	databricksDB := &sql.DB{}
-
 	if datasourceSettings.ConnectionMethod == "m2m" {
 		authenticator := m2m.NewAuthenticator(
 			datasourceSettings.ClientId,
@@ -82,7 +79,13 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 			return nil, err
 		} else {
 			log.DefaultLogger.Info("Init Databricks SQL DB")
-			databricksDB = sql.OpenDB(connector)
+			databricksDB := sql.OpenDB(connector)
+
+			if err := databricksDB.Ping(); err != nil {
+				log.DefaultLogger.Info("Ping Error (Could not ping Databricks)", "err", err)
+				return nil, err
+			}
+
 			databricksDB.SetConnMaxIdleTime(6 * time.Hour)
 			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 			return &Datasource{
@@ -103,7 +106,13 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 			return nil, err
 		}
 		log.DefaultLogger.Info("Init Databricks SQL DB")
-		databricksDB = sql.OpenDB(connector)
+		databricksDB := sql.OpenDB(connector)
+
+		if err := databricksDB.Ping(); err != nil {
+			log.DefaultLogger.Info("Ping Error (Could not ping Databricks)", "err", err)
+			return nil, err
+		}
+
 		databricksDB.SetConnMaxIdleTime(6 * time.Hour)
 		log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 		return &Datasource{
@@ -118,6 +127,12 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 
 func (d *Datasource) RefreshDBConnection() error {
 	d.databricksDB = sql.OpenDB(d.connector)
+
+	if err := d.databricksDB.Ping(); err != nil {
+		log.DefaultLogger.Info("Ping Error (Could not ping Databricks)", "err", err)
+		return err
+	}
+
 	d.databricksDB.SetConnMaxIdleTime(6 * time.Hour)
 	log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 	return nil
