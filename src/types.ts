@@ -26,6 +26,8 @@ export interface MyDataSourceOptions extends DataSourceJsonData {
   port?: string;
   path?: string;
   autoCompletion?: boolean;
+  connectionMethod?: string;
+  clientId?: string;
 }
 
 /**
@@ -33,6 +35,7 @@ export interface MyDataSourceOptions extends DataSourceJsonData {
  */
 export interface MySecureJsonData {
   token?: string;
+  clientSecret?: string;
 }
 
 export interface MyVariableQuery {

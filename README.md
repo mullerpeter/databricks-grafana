@@ -65,7 +65,10 @@ Available configuration fields are as follows:
 | Server Hostname      | Databricks Server Hostname (without http). i.e. `XXX.cloud.databricks.com`                                   |
 | Server Port          | Databricks Server Port (default `443`)                                                                       |
 | HTTP Path            | HTTP Path value for the existing cluster or SQL warehouse. i.e. `sql/1.0/endpoints/XXX`                      |
-| Access Token         | Personal Access Token for Databricks.                                                                        |
+| Authentication Type  | PAT (Personal Access Token) or M2M (Machine to Machine) OAuth Authentication                                 |
+| Client ID            | Databricks Service Principal Client ID. (only if M2M OAuth is chosen as Auth Method)                         |
+| Client Secret        | Databricks Service Principal Client Secret. (only if M2M OAuth is chosen as Auth Method)                     |
+| Access Token         | Personal Access Token for Databricks. (only if PAT is chosen as Auth Method)                                 |
 | Code Auto Completion | If enabled the SQL editor will fetch catalogs/schemas/tables/columns from Databricks to provide suggestions. |
 
 ### Supported Macros
