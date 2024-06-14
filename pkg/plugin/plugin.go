@@ -3,16 +3,18 @@ package plugin
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
-	_ "github.com/databricks/databricks-sql-go"
+	dbsql "github.com/databricks/databricks-sql-go"
+	"github.com/databricks/databricks-sql-go/auth/oauth/m2m"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/grafana/grafana-plugin-sdk-go/data/sqlutil"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -34,9 +36,11 @@ var (
 )
 
 type DatasourceSettings struct {
-	Path     string `json:"path"`
-	Hostname string `json:"hostname"`
-	Port     string `json:"port"`
+	Path                 string `json:"path"`
+	Hostname             string `json:"hostname"`
+	Port                 string `json:"port"`
+	AuthenticationMethod string `json:"authenticationMethod"`
+	ClientId             string `json:"clientId"`
 }
 
 // NewSampleDatasource creates a new datasource instance.
@@ -45,47 +49,93 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 	err := json.Unmarshal(settings.JSONData, datasourceSettings)
 	if err != nil {
 		log.DefaultLogger.Info("Setting Parse Error", "err", err)
+		return nil, err
 	}
-	port := "443"
+	port := 443
 	if datasourceSettings.Port != "" {
-		port = datasourceSettings.Port
-	}
-	databricksConnectionsString := fmt.Sprintf("token:%s@%s:%s/%s", settings.DecryptedSecureJSONData["token"], datasourceSettings.Hostname, port, datasourceSettings.Path)
-	databricksDB := &sql.DB{}
-	if databricksConnectionsString != "" {
-		log.DefaultLogger.Info("Init Databricks SQL DB")
-		db, err := sql.Open("databricks", databricksConnectionsString)
+		portInt, err := strconv.Atoi(datasourceSettings.Port)
 		if err != nil {
-			log.DefaultLogger.Info("DB Init Error", "err", err)
-		} else {
-			databricksDB = db
-			databricksDB.SetConnMaxIdleTime(6 * time.Hour)
-			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
+			log.DefaultLogger.Info("Port Parse Error", "err", err)
+			return nil, err
 		}
+		port = portInt
 	}
 
-	return &Datasource{
-		databricksConnectionsString: databricksConnectionsString,
-		databricksDB:                databricksDB,
-	}, nil
+	if datasourceSettings.AuthenticationMethod == "m2m" {
+		authenticator := m2m.NewAuthenticator(
+			datasourceSettings.ClientId,
+			settings.DecryptedSecureJSONData["clientSecret"],
+			datasourceSettings.Hostname,
+		)
+
+		connector, err := dbsql.NewConnector(
+			dbsql.WithServerHostname(datasourceSettings.Hostname),
+			dbsql.WithHTTPPath(datasourceSettings.Path),
+			dbsql.WithPort(port),
+			dbsql.WithAuthenticator(authenticator),
+		)
+		if err != nil {
+			log.DefaultLogger.Info("Connector Error", "err", err)
+			return nil, err
+		} else {
+			log.DefaultLogger.Info("Init Databricks SQL DB")
+			databricksDB := sql.OpenDB(connector)
+
+			if err := databricksDB.Ping(); err != nil {
+				log.DefaultLogger.Info("Ping Error (Could not ping Databricks)", "err", err)
+				return nil, err
+			}
+
+			databricksDB.SetConnMaxIdleTime(6 * time.Hour)
+			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
+			return &Datasource{
+				connector:    connector,
+				databricksDB: databricksDB,
+			}, nil
+		}
+	} else if datasourceSettings.AuthenticationMethod == "dsn" || datasourceSettings.AuthenticationMethod == "" {
+
+		connector, err := dbsql.NewConnector(
+			dbsql.WithAccessToken(settings.DecryptedSecureJSONData["token"]),
+			dbsql.WithServerHostname(datasourceSettings.Hostname),
+			dbsql.WithPort(port),
+			dbsql.WithHTTPPath(datasourceSettings.Path),
+		)
+		if err != nil {
+			log.DefaultLogger.Info("Connector Error", "err", err)
+			return nil, err
+		}
+		log.DefaultLogger.Info("Init Databricks SQL DB")
+		databricksDB := sql.OpenDB(connector)
+
+		if err := databricksDB.Ping(); err != nil {
+			log.DefaultLogger.Info("Ping Error (Could not ping Databricks)", "err", err)
+			return nil, err
+		}
+
+		databricksDB.SetConnMaxIdleTime(6 * time.Hour)
+		log.DefaultLogger.Info("Store Databricks SQL DB Connection")
+		return &Datasource{
+			connector:    connector,
+			databricksDB: databricksDB,
+		}, nil
+
+	}
+
+	return nil, fmt.Errorf("Invalid Connection Method")
 }
 
 func (d *Datasource) RefreshDBConnection() error {
-	if d.databricksConnectionsString != "" {
-		log.DefaultLogger.Info("Refreshing Databricks SQL DB Connection")
-		db, err := sql.Open("databricks", d.databricksConnectionsString)
-		if err != nil {
-			log.DefaultLogger.Info("DB Init Error", "err", err)
-			return err
-		} else {
-			d.databricksDB = db
-			d.databricksDB.SetConnMaxIdleTime(6 * time.Hour)
-			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
-			return nil
-		}
+	d.databricksDB = sql.OpenDB(d.connector)
+
+	if err := d.databricksDB.Ping(); err != nil {
+		log.DefaultLogger.Info("Ping Error (Could not ping Databricks)", "err", err)
+		return err
 	}
 
-	return errors.New("no connection string set")
+	d.databricksDB.SetConnMaxIdleTime(6 * time.Hour)
+	log.DefaultLogger.Info("Store Databricks SQL DB Connection")
+	return nil
 }
 
 func (d *Datasource) ExecuteQuery(queryString string) (*sql.Rows, error) {
@@ -111,8 +161,8 @@ func (d *Datasource) ExecuteQuery(queryString string) (*sql.Rows, error) {
 // Datasource is an example datasource which can respond to data queries, reports
 // its health and has streaming skills.
 type Datasource struct {
-	databricksConnectionsString string
-	databricksDB                *sql.DB
+	connector    driver.Connector
+	databricksDB *sql.DB
 }
 
 func (d *Datasource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
@@ -264,15 +314,6 @@ func (d *Datasource) query(_ context.Context, pCtx backend.PluginContext, query 
 // a datasource is working as expected.
 func (d *Datasource) CheckHealth(_ context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
 	log.DefaultLogger.Info("CheckHealth called", "request", req)
-
-	dsn := d.databricksConnectionsString
-
-	if dsn == "" {
-		return &backend.CheckHealthResult{
-			Status:  backend.HealthStatusError,
-			Message: "No connection string found." + "Set the DATABRICKS_DSN environment variable, and try again.",
-		}, nil
-	}
 
 	rows, err := d.ExecuteQuery("SELECT 1")
 

@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.2.5
+## 1.2.6
+
+- Feature: Add support for M2M OAuth Authentication via Service Principal
+
+---
+
+### 1.2.5
 
 - Fix: Add support for milliseconds in time window interval
 
