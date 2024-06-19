@@ -28,6 +28,7 @@ export interface MyDataSourceOptions extends DataSourceJsonData {
   autoCompletion?: boolean;
   authenticationMethod?: string;
   clientId?: string;
+  externalCredentialsUrl?: string;
 }
 
 /**
