@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.2.6
+## 1.2.7
+
+- Feature: Add support to fetch Databricks Token from external OAuth Endpoint 
+
+---
+
+### 1.2.6
 
 - Feature: Add support for M2M OAuth Authentication via Service Principal
 
