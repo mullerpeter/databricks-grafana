@@ -129,6 +129,17 @@ export class ConfigEditor extends PureComponent<Props, State> {
     });
   }
 
+  onExternalCredentialsUrlChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { onOptionsChange, options } = this.props;
+    onOptionsChange({
+      ...options,
+      jsonData: {
+        ...options.jsonData,
+        externalCredentialsUrl: event.target.value,
+      },
+    });
+  };
+
   render() {
     const { options } = this.props;
     const { secureJsonFields } = options;
@@ -162,7 +173,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
                   onChange={this.onPathChange}
               />
             </InlineField>
-            <InlineField label="Authentication Method" labelWidth={30} tooltip="PAT (Personal Access Token) or M2M (Machine to Machine) OAuth Authentication">
+            <InlineField label="Authentication Method" labelWidth={30} tooltip="PAT (Personal Access Token), M2M (Machine to Machine) OAuth or OAuth 2.0 Client Credentials (not Databricks M2M) Authentication">
               <Select
                   onChange={({ value }) => {
                     this.onAuthenticationMethodChange(value);
@@ -176,12 +187,26 @@ export class ConfigEditor extends PureComponent<Props, State> {
                       value: 'm2m',
                       label: 'M2M Oauth',
                     },
+                    {
+                      value: 'oauth2_client_credentials',
+                      label: 'OAuth2 Client Credentials',
+                    },
                   ]}
                   value={jsonData.authenticationMethod || 'dsn'}
                   backspaceRemovesValue
               />
             </InlineField>
-            {jsonData.authenticationMethod === 'm2m' ? (
+            {jsonData.authenticationMethod === 'oauth2_client_credentials' && (
+              <InlineField label="OAuth2 Token Endpoint" labelWidth={30} tooltip="HTTP URL to token endpoint">
+                <Input
+                    value={jsonData.externalCredentialsUrl || ''}
+                    placeholder="http://localhost:2020"
+                    width={40}
+                    onChange={this.onExternalCredentialsUrlChange}
+                />
+              </InlineField>
+            )}
+            {(jsonData.authenticationMethod === 'm2m' || jsonData.authenticationMethod === 'oauth2_client_credentials') ? (
                 <>
                   <InlineField label="Client ID" labelWidth={30} tooltip="Databricks Service Principal Client ID">
                     <Input

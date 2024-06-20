@@ -7,12 +7,14 @@ import (
 	"encoding/json"
 	"fmt"
 	dbsql "github.com/databricks/databricks-sql-go"
+	"github.com/databricks/databricks-sql-go/auth"
 	"github.com/databricks/databricks-sql-go/auth/oauth/m2m"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/grafana/grafana-plugin-sdk-go/data/sqlutil"
+	"github.com/mullerpeter/databricks-grafana/pkg/integrations"
 	"reflect"
 	"strconv"
 	"strings"
@@ -36,11 +38,12 @@ var (
 )
 
 type DatasourceSettings struct {
-	Path                 string `json:"path"`
-	Hostname             string `json:"hostname"`
-	Port                 string `json:"port"`
-	AuthenticationMethod string `json:"authenticationMethod"`
-	ClientId             string `json:"clientId"`
+	Path                   string `json:"path"`
+	Hostname               string `json:"hostname"`
+	Port                   string `json:"port"`
+	AuthenticationMethod   string `json:"authenticationMethod"`
+	ClientId               string `json:"clientId"`
+	ExternalCredentialsUrl string `json:"externalCredentialsUrl"`
 }
 
 // NewSampleDatasource creates a new datasource instance.
@@ -61,12 +64,30 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 		port = portInt
 	}
 
-	if datasourceSettings.AuthenticationMethod == "m2m" {
-		authenticator := m2m.NewAuthenticator(
-			datasourceSettings.ClientId,
-			settings.DecryptedSecureJSONData["clientSecret"],
-			datasourceSettings.Hostname,
-		)
+	if datasourceSettings.AuthenticationMethod == "m2m" || datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" {
+		var authenticator auth.Authenticator
+
+		if datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" {
+			if datasourceSettings.ExternalCredentialsUrl == "" {
+				log.DefaultLogger.Info("Authentication Method missing Credentials Url", "err", nil)
+				return nil, fmt.Errorf("authentication Method missing Credentials Url")
+			}
+			authenticator = integrations.NewOauth2ClientCredentials(
+				datasourceSettings.ClientId,
+				settings.DecryptedSecureJSONData["clientSecret"],
+				datasourceSettings.ExternalCredentialsUrl,
+			)
+		} else if datasourceSettings.AuthenticationMethod == "m2m" {
+			authenticator = m2m.NewAuthenticatorWithScopes(
+				datasourceSettings.ClientId,
+				settings.DecryptedSecureJSONData["clientSecret"],
+				datasourceSettings.Hostname,
+				[]string{},
+			)
+		} else {
+			log.DefaultLogger.Info("Authentication Method Parse Error", "err", nil)
+			return nil, fmt.Errorf("authentication Method Parse Error")
+		}
 
 		connector, err := dbsql.NewConnector(
 			dbsql.WithServerHostname(datasourceSettings.Hostname),
