@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.2.7
+## 1.2.8
+
+- Bugfix: Use retry logic on Invalid SessionHandle error for Code Autocomplete Suggestions Queries
+
+---
+
+### 1.2.7
 
 - Feature: Add support to fetch Databricks Token from external OAuth Endpoint 
 

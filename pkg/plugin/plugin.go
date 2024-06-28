@@ -187,7 +187,7 @@ type Datasource struct {
 }
 
 func (d *Datasource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
-	return autocompletionQueries(req, sender, d.databricksDB)
+	return autocompletionQueries(req, sender, d)
 }
 
 // Dispose here tells plugin SDK that plugin wants to clean up resources when a new instance
