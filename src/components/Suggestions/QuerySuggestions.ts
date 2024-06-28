@@ -58,11 +58,11 @@ export class QuerySuggestions {
 
     constructor(dataSource: DataSource) {
         this.dataSource = dataSource;
+        this.initConstantSuggestions();
     }
 
     private async initialize(): Promise<void> {
         this.isInitialized = true;
-        this.initConstantSuggestions();
         await this.catalogSchemaTableInit();
     }
 
