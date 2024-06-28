@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.2.8
+## 1.2.9
+
+- Bugfix: Only init Suggestion Provider when editor with AutoComplete is active
+
+---
+
+### 1.2.8
 
 - Bugfix: Use retry logic on Invalid SessionHandle error for Code Autocomplete Suggestions Queries
 

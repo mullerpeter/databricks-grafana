@@ -54,11 +54,18 @@ export class QuerySuggestions {
     private tableSuggestions: CodeEditorSuggestionItem[] = [];
     private columnSuggestions: CodeEditorSuggestionItem[] = [];
 
+    private isInitialized = false;
+
     constructor(dataSource: DataSource) {
         this.dataSource = dataSource;
-        this.initConstantSuggestions();
-        this.catalogSchemaTableInit();
     }
+
+    private async initialize(): Promise<void> {
+        this.isInitialized = true;
+        this.initConstantSuggestions();
+        await this.catalogSchemaTableInit();
+    }
+
     // ts-ignore are used since the grafana-ui types for the suggestions do not contain all the fields of the
     // underlying monaco editor suggestions, additional fields are needed to insert snippets & sort the suggestions
     private initConstantSuggestions(): void {
@@ -190,7 +197,10 @@ export class QuerySuggestions {
             }
         }
     }
-    public updateSuggestions(value: string, cursorPosition: {lineNumber: number, column: number}): void {
+    public async updateSuggestions(value: string, cursorPosition: { lineNumber: number, column: number }): Promise<void> {
+        if (!this.isInitialized) {
+            await this.initialize();
+        }
         const currentClauseResponse = getCursorPositionClause(value, cursorPosition);
         this.currentClause = currentClauseResponse.clause.toUpperCase();
         this.currentClauseIndex = currentClauseResponse.index;
