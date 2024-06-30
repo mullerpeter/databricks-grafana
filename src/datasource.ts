@@ -3,21 +3,21 @@ import {LanguageDefinition} from '@grafana/experimental';
 import {TemplateSrv} from '@grafana/runtime';
 import {DB, formatSQL, SqlDatasource, SQLQuery, SQLSelectableValue} from 'components/grafana-sql/src';
 
-import {PostgresQueryModel} from './PostgresQueryModel';
-import {fetchColumns, fetchTables, getSqlCompletionProvider} from './sqlCompletionProvider';
+import {DatabricksQueryModel} from './DatabricksQueryModel';
+import {fetchColumns, fetchSchemas, fetchTables, getSqlCompletionProvider} from './sqlCompletionProvider';
 import {getFieldConfig, toRawSql} from './sqlUtil';
-import {PostgresOptions} from './types';
+import {DatabricksDataSourceOptions} from './types';
 
-export class PostgresDatasource extends SqlDatasource {
+export class DatabricksDatasource extends SqlDatasource {
   sqlLanguageDefinition: LanguageDefinition | undefined = undefined;
 
-  constructor(instanceSettings: DataSourceInstanceSettings<PostgresOptions>) {
+  constructor(instanceSettings: DataSourceInstanceSettings<DatabricksDataSourceOptions>) {
     super(instanceSettings);
-    // this.setDefaults();
+    this.setDefaults();
   }
 
-  getQueryModel(target?: SQLQuery, templateSrv?: TemplateSrv, scopedVars?: ScopedVars): PostgresQueryModel {
-    return new PostgresQueryModel(target, templateSrv, scopedVars);
+  getQueryModel(target?: SQLQuery, templateSrv?: TemplateSrv, scopedVars?: ScopedVars): DatabricksQueryModel {
+    return new DatabricksQueryModel(target, templateSrv, scopedVars);
   }
 
   async setDefaults(): Promise<void> {
@@ -46,6 +46,7 @@ export class PostgresDatasource extends SqlDatasource {
     const args = {
       getColumns: { current: (query: SQLQuery) => fetchColumns(db, query) },
       getTables: { current: (query: SQLQuery) => fetchTables(db, query) },
+      getSchemas: { current: (query: SQLQuery) => fetchSchemas(db, query) },
     };
     this.sqlLanguageDefinition = {
       id: 'sql',
@@ -75,23 +76,28 @@ export class PostgresDatasource extends SqlDatasource {
       init: () => Promise.resolve(true),
       catalogs: () => this.fetchCatalogs(),
       schemas: async (catalog) => {
-          if (!catalog) {
+        catalog = catalog || this.defaultCatalog;
+        if (!catalog) {
           return [];
-          }
-          return this.fetchSchemas(catalog);
+        }
+        return this.fetchSchemas(catalog);
       },
       tables: async (catalog, schema) => {
+        catalog = catalog || this.defaultCatalog;
+        schema = schema || this.defaultSchema;
         if (!catalog || !schema) {
           return [];
         }
         return this.fetchTables(catalog, schema);
       },
       getEditorLanguageDefinition: () => this.getSqlLanguageDefinition(this.db),
-      fields: async (query: SQLQuery) => {
-        if (!query?.table || !query?.catalog || !query?.schema) {
+      fields: async (catalog, schema, table) => {
+        catalog = catalog || this.defaultCatalog;
+        schema = schema || this.defaultSchema;
+        if (!table || !catalog || !schema) {
           return [];
         }
-        return this.fetchFields(query.table, query.schema, query.catalog);
+        return this.fetchFields(table, schema, catalog);
       },
       validateQuery: (query) =>
         Promise.resolve({ isError: false, isValid: true, query, error: '', rawSql: query.rawSql }),

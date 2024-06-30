@@ -1,15 +1,15 @@
 import { DataSourcePlugin } from '@grafana/data';
 
 import { CheatSheet } from './CheatSheet';
-import { PostgresQueryEditor } from './PostgresQueryEditor';
+import { DatabricksQueryEditor } from './DatabricksQueryEditor';
 import { ConfigEditor } from './components/ConfigEditor/ConfigEditor';
-import { PostgresDatasource } from './datasource';
-import { PostgresOptions, SecureJsonData } from './types';
+import { DatabricksDatasource } from './datasource';
+import { DatabricksDataSourceOptions, DatabricksSecureJsonData } from './types';
 import {SQLQuery} from "./components/grafana-sql/src";
 
-export const plugin = new DataSourcePlugin<PostgresDatasource, SQLQuery, PostgresOptions, SecureJsonData>(
-  PostgresDatasource
+export const plugin = new DataSourcePlugin<DatabricksDatasource, SQLQuery, DatabricksDataSourceOptions, DatabricksSecureJsonData>(
+  DatabricksDatasource
 )
-  .setQueryEditor(PostgresQueryEditor)
+  .setQueryEditor(DatabricksQueryEditor)
   .setQueryEditorHelp(CheatSheet)
   .setConfigEditor(ConfigEditor);

@@ -1,9 +1,9 @@
 import React, {ChangeEvent, FormEvent, PureComponent} from 'react';
 import { InlineField, Input, SecretInput, InlineSwitch, Alert, Select } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
-import { MyDataSourceOptions, MySecureJsonData } from '../../types';
+import { DatabricksDataSourceOptions, DatabricksSecureJsonData } from '../../types';
 
-interface Props extends DataSourcePluginOptionsEditorProps<MyDataSourceOptions> {}
+interface Props extends DataSourcePluginOptionsEditorProps<DatabricksDataSourceOptions> {}
 
 interface State {}
 
@@ -143,8 +143,8 @@ export class ConfigEditor extends PureComponent<Props, State> {
   render() {
     const { options } = this.props;
     const { secureJsonFields } = options;
-    const secureJsonData = (options.secureJsonData || {}) as MySecureJsonData;
-    const jsonData = (options.jsonData || {}) as MyDataSourceOptions;
+    const secureJsonData = (options.secureJsonData || {}) as DatabricksSecureJsonData;
+    const jsonData = (options.jsonData || {}) as DatabricksDataSourceOptions;
 
     return (
         <>

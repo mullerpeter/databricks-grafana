@@ -1,5 +1,5 @@
 import {CodeEditorSuggestionItem, CodeEditorSuggestionItemKind} from "@grafana/ui";
-import {DataSource} from "../../datasource";
+import {DatabricksDatasource} from "../../datasource";
 import {
     Clause,
     defaultSuggestionConfig,
@@ -37,7 +37,7 @@ export class QuerySuggestions {
         templateVariables: [],
         functions: [],
     }
-    private dataSource: DataSource;
+    private dataSource: DatabricksDatasource;
 
     private loadedSchemas: string[] = [];
     private loadedTables: string[] = [];
@@ -56,7 +56,7 @@ export class QuerySuggestions {
 
     private isInitialized = false;
 
-    constructor(dataSource: DataSource) {
+    constructor(dataSource: DatabricksDatasource) {
         this.dataSource = dataSource;
         this.initConstantSuggestions();
     }

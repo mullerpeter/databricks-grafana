@@ -131,7 +131,7 @@ export interface DB {
   catalogs: () => Promise<string[]>;
   schemas: (catalog?: string) => Promise<string[]>;
   tables: (catalog?: string, schema?: string) => Promise<string[]>;
-  fields: (query: SQLQuery, order?: boolean) => Promise<SQLSelectableValue[]>;
+  fields: (catalog?: string, schema?: string, table?: string) => Promise<SQLSelectableValue[]>;
   validateQuery: (query: SQLQuery, range?: TimeRange) => Promise<ValidationResults>;
   dsID: () => number;
   dispose?: (dsID?: string) => void;

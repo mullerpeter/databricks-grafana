@@ -3,7 +3,7 @@ import { TemplateSrv } from '@grafana/runtime';
 import { VariableFormatID } from '@grafana/schema';
 import {SQLQuery, SqlQueryModel, applyQueryDefaults} from 'components/grafana-sql/src';
 
-export class PostgresQueryModel implements SqlQueryModel {
+export class DatabricksQueryModel implements SqlQueryModel {
   target: SQLQuery;
   templateSrv?: TemplateSrv;
   scopedVars?: ScopedVars;
