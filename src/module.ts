@@ -1,7 +1,7 @@
 import { DataSourcePlugin } from '@grafana/data';
 
-import { CheatSheet } from './CheatSheet';
-import { DatabricksQueryEditor } from './DatabricksQueryEditor';
+import { CheatSheet } from './components/QueryEditor/CheatSheet';
+import { DatabricksQueryEditor } from './components/QueryEditor/DatabricksQueryEditor';
 import { ConfigEditor } from './components/ConfigEditor/ConfigEditor';
 import { DatabricksDatasource } from './datasource';
 import { DatabricksDataSourceOptions, DatabricksSecureJsonData } from './types';

@@ -1,79 +1,5 @@
 import {MacroType} from "@grafana/experimental";
 
-interface SuggestionConfig {
-    keywords: string[]
-    templateVariables: boolean
-    functions: boolean
-    tables: boolean
-    columns: boolean
-}
-
-type SuggestionConfigs = {
-    [clause in Clause]: SuggestionConfig
-}
-
-export enum Clause {
-    START = "START",
-    SELECT = "SELECT",
-    USE = "USE",
-    FROM = "FROM",
-    WHERE = "WHERE",
-    GROUP_BY = "GROUP BY",
-    ORDER_BY = "ORDER BY",
-}
-
-export const defaultSuggestionConfig: SuggestionConfigs = {
-    "START": {
-        keywords: ["SELECT", "USE", "SHOW", "DESCRIBE", "DESC", "EXPLAIN", "LIST", "ANALYZE TABLE"],
-        templateVariables: false,
-        functions: false,
-        tables: false,
-        columns: false
-    },
-    "SELECT": {
-        keywords: ["FROM"],
-        templateVariables: true,
-        functions: true,
-        tables: false,
-        columns: true
-    },
-    "USE": {
-        keywords: ["CATALOG", "SCHEMA"],
-        templateVariables: false,
-        functions: false,
-        tables: true,
-        columns: false
-    },
-    "FROM": {
-        keywords: ["WHERE", "GROUP BY", "GROUP BY ALL", "QUALIFY", "HAVING", "WINDOW", "ORDER BY", "CLUSTER BY", "DISTRIBUTE BY", "SORT BY", "LIMIT", "OFFSET", "UNION", "TIMESTAMP AS OF", "VERSION AS OF", "LITERAL VIEW", "CROSS JOIN", "FULL JOIN", "FULL OUTER JOIN", "INNER JOIN", "JOIN", "LEFT JOIN", "LEFT OUTER JOIN", "LEFT SEMI JOIN", "OUTER JOIN", "RIGHT JOIN", "RIGHT OUTER JOIN", "RIGHT SEMI JOIN", "RIGHT ANTI JOIN", "LEFT ANTI JOIN", "ON"],
-        templateVariables: false,
-        functions: false,
-        tables: true,
-        columns: false
-    },
-    "WHERE": {
-        keywords: ["AND", "BETWEEN", "IS FALSE", "IS NOT FALSE", "IS NOT NULL", "IS NOT TRUE", "IS NULL", "IS TRUE", "NOT BETWEEN", "OR", "WHERE", "GROUP BY", "GROUP BY ALL", "QUALIFY", "HAVING", "WINDOW", "ORDER BY", "CLUSTER BY", "DISTRIBUTE BY", "SORT BY", "LIMIT", "OFFSET", "UNION", "TIMESTAMP AS OF", "VERSION AS OF", "LITERAL VIEW", "CROSS JOIN", "FULL JOIN", "FULL OUTER JOIN", "INNER JOIN", "JOIN", "LEFT JOIN", "LEFT OUTER JOIN", "LEFT SEMI JOIN", "OUTER JOIN", "RIGHT JOIN", "RIGHT OUTER JOIN", "RIGHT SEMI JOIN", "RIGHT ANTI JOIN", "LEFT ANTI JOIN", "ON"],
-        templateVariables: true,
-        functions: false,
-        tables: false,
-        columns: false
-    },
-    "GROUP BY": {
-        keywords: ["ORDER BY", "CLUSTER BY", "DISTRIBUTE BY", "SORT BY", "LIMIT", "OFFSET"],
-        templateVariables: true,
-        functions: false,
-        tables: false,
-        columns: false
-    },
-    "ORDER BY": {
-        keywords: ["LIMIT", "OFFSET", "DESC", "ASC"],
-        templateVariables: true,
-        functions: false,
-        tables: false,
-        columns: false
-    }
-}
-
 export const macros = [
     {
         id: "$__timeFilter(dateColumn)",
@@ -91,24 +17,23 @@ export const macros = [
         type: MacroType.Group,
         description: "Will be replaced by a time range filter using the specified column name. For example, dateColumn BETWEEN FROM_UNIXTIME(1494410783) AND FROM_UNIXTIME(1494410983)"
     },
-
-
 ]
 
-export const templateVariables = [
-    "$__timeFrom()",
-    "$__timeTo()",
-    "${__from}",
-    "${__from:date}",
-    "${__from:date:iso}",
-    "${__from:date:seconds}",
-    "${__to}",
-    "${__to:date}",
-    "${__to:date:iso}",
-    "${__to:date:seconds}",
-    "${__interval}",
-    "${__interval_ms}"
-]
+// TODO: Add to macros
+// export const templateVariables = [
+//     "$__timeFrom()",
+//     "$__timeTo()",
+//     "${__from}",
+//     "${__from:date}",
+//     "${__from:date:iso}",
+//     "${__from:date:seconds}",
+//     "${__to}",
+//     "${__to:date}",
+//     "${__to:date:iso}",
+//     "${__to:date:seconds}",
+//     "${__interval}",
+//     "${__interval_ms}"
+// ]
 export const functions = [
     "abs",
     "acos",

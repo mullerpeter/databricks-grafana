@@ -11,7 +11,7 @@ import {
     TokenType
 } from '@grafana/experimental';
 import {DB, SQLQuery} from 'components/grafana-sql/src';
-import {functions, macros} from "./components/Suggestions/constants";
+import {functions, macros} from "./constants";
 
 interface CustomCompletionDefinition {
     label: string;

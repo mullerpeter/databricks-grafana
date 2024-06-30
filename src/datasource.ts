@@ -8,8 +8,8 @@ import {
   fetchColumns,
   fetchSuggestions,
   getSqlCompletionProvider
-} from './sqlCompletionProvider';
-import {getFieldConfig, toRawSql} from './sqlUtil';
+} from './components/Suggestions/sqlCompletionProvider';
+import {getFieldConfig, toRawSql} from './components/Suggestions/sqlUtil';
 import {ColumnResponse, DatabricksDataSourceOptions} from './types';
 
 export class DatabricksDatasource extends SqlDatasource {
