@@ -1,3 +1,5 @@
+import {MacroType} from "@grafana/experimental";
+
 interface SuggestionConfig {
     keywords: string[]
     templateVariables: boolean
@@ -71,6 +73,27 @@ export const defaultSuggestionConfig: SuggestionConfigs = {
         columns: false
     }
 }
+
+export const macros = [
+    {
+        id: "$__timeFilter(dateColumn)",
+        name: "$__timeFilter(dateColumn)",
+        text: "$__timeFilter",
+        args: ['column'],
+        type: MacroType.Filter,
+        description: "Will be replaced by a time range filter using the specified column name. For example, dateColumn BETWEEN FROM_UNIXTIME(1494410783) AND FROM_UNIXTIME(1494410983)"
+    },
+    {
+        id: "$__timeWindow(dateColumn)",
+        name: "$__timeWindow(dateColumn)",
+        text: "$__timeWindow",
+        args: ['column'],
+        type: MacroType.Group,
+        description: "Will be replaced by a time range filter using the specified column name. For example, dateColumn BETWEEN FROM_UNIXTIME(1494410783) AND FROM_UNIXTIME(1494410983)"
+    },
+
+
+]
 
 export const templateVariables = [
     "$__timeFrom()",

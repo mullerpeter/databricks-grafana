@@ -17,6 +17,7 @@ export function getFieldConfig(type: string): { raqbFieldType: RAQBFieldTypes; i
       return { raqbFieldType: 'text', icon: 'text' };
     }
     case 'smallint':
+    case 'tinyint':
     case 'int':
     case 'bigint':
     case 'decimal':
@@ -39,6 +40,7 @@ export function getFieldConfig(type: string): { raqbFieldType: RAQBFieldTypes; i
       return { raqbFieldType: 'time', icon: 'clock-nine' };
     }
     case 'timestamp':
+    case 'timestamp_ntz':
     case 'timestamp with time zone':
     case 'timestamp without time zone': {
       return { raqbFieldType: 'datetime', icon: 'clock-nine' };

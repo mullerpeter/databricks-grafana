@@ -4,7 +4,13 @@ import {TemplateSrv} from '@grafana/runtime';
 import {DB, formatSQL, SqlDatasource, SQLQuery, SQLSelectableValue} from 'components/grafana-sql/src';
 
 import {DatabricksQueryModel} from './DatabricksQueryModel';
-import {fetchColumns, fetchSchemas, fetchTables, getSqlCompletionProvider} from './sqlCompletionProvider';
+import {
+  fetchCatalogs,
+  fetchColumns,
+  fetchSchemas,
+  fetchTables,
+  getSqlCompletionProvider
+} from './sqlCompletionProvider';
 import {getFieldConfig, toRawSql} from './sqlUtil';
 import {DatabricksDataSourceOptions} from './types';
 
@@ -47,6 +53,7 @@ export class DatabricksDatasource extends SqlDatasource {
       getColumns: { current: (query: SQLQuery) => fetchColumns(db, query) },
       getTables: { current: (query: SQLQuery) => fetchTables(db, query) },
       getSchemas: { current: (query: SQLQuery) => fetchSchemas(db, query) },
+      getCatalogs: { current: (query: SQLQuery) => fetchCatalogs(db, query) },
     };
     this.sqlLanguageDefinition = {
       id: 'sql',
