@@ -43,3 +43,8 @@ export interface Suggestions {
   tables: string[]
   columns: Column[]
 }
+
+export type ColumnResponse = {
+  name: string;
+  type: string;
+};

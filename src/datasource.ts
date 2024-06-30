@@ -5,14 +5,12 @@ import {DB, formatSQL, SqlDatasource, SQLQuery, SQLSelectableValue} from 'compon
 
 import {DatabricksQueryModel} from './DatabricksQueryModel';
 import {
-  fetchCatalogs,
   fetchColumns,
-  fetchSchemas,
-  fetchTables,
+  fetchSuggestions,
   getSqlCompletionProvider
 } from './sqlCompletionProvider';
 import {getFieldConfig, toRawSql} from './sqlUtil';
-import {DatabricksDataSourceOptions} from './types';
+import {ColumnResponse, DatabricksDataSourceOptions} from './types';
 
 export class DatabricksDatasource extends SqlDatasource {
   sqlLanguageDefinition: LanguageDefinition | undefined = undefined;
@@ -30,18 +28,46 @@ export class DatabricksDatasource extends SqlDatasource {
     const defaults: any = await this.postResource("defaults", {})
     this.defaultCatalog = defaults.defaultCatalog;
     this.defaultSchema = defaults.defaultSchema;
+    if (this.defaultCatalog) {
+      this.addToFetchedCatalogsSchemas(this.defaultCatalog, this.defaultSchema);
+    }
   }
 
-  async fetchTables(catalog: string, schema: string): Promise<string[]> {
+  addToFetchedCatalogsSchemas(catalog: string, schema: string | undefined): void {
+    if (!this.fetchedCatalogsSchemas.catalogs[catalog]) {
+      this.fetchedCatalogsSchemas.catalogs[catalog] = {
+        name: catalog,
+        schemas: {}
+      }
+    }
+    if (schema && !this.fetchedCatalogsSchemas.catalogs[catalog]?.schemas[schema]) {
+      this.fetchedCatalogsSchemas.catalogs[catalog].schemas[schema] = { name: schema };
+    }
+  }
+
+  async fetchTables(catalog = this.defaultCatalog, schema = this.defaultSchema): Promise<string[]> {
+    if (!catalog || !schema) {
+      return [];
+    }
+    if (!this.fetchedCatalogsSchemas?.catalogs[catalog]?.schemas[schema]) {
+        return [];
+    }
     return await this.postResource("tables", {catalog: catalog, schema: schema})
   }
 
-  async fetchSchemas(catalog: string): Promise<string[]> {
-    return await this.postResource("schemas", {catalog: catalog})
+  async fetchSchemas(catalog = this.defaultCatalog): Promise<string[]> {
+    if (!catalog || !this.fetchedCatalogsSchemas || !this.fetchedCatalogsSchemas?.catalogs[catalog]) {
+      return [];
+    }
+    const schemas = await this.postResource("schemas", {catalog}) as string[];
+    schemas.forEach(schema => this.addToFetchedCatalogsSchemas(catalog, schema));
+    return schemas;
   }
 
   async fetchCatalogs(): Promise<string[]> {
-    return await this.postResource("catalogs", {})
+    const catalogs = await this.postResource("catalogs", {}) as string[];
+    catalogs.forEach(catalog => this.addToFetchedCatalogsSchemas(catalog, undefined));
+    return catalogs;
   }
 
   getSqlLanguageDefinition(db: DB): LanguageDefinition {
@@ -51,9 +77,7 @@ export class DatabricksDatasource extends SqlDatasource {
 
     const args = {
       getColumns: { current: (query: SQLQuery) => fetchColumns(db, query) },
-      getTables: { current: (query: SQLQuery) => fetchTables(db, query) },
-      getSchemas: { current: (query: SQLQuery) => fetchSchemas(db, query) },
-      getCatalogs: { current: (query: SQLQuery) => fetchCatalogs(db, query) },
+      getSuggestions: { current: (value: string) => fetchSuggestions(value, db) }
     };
     this.sqlLanguageDefinition = {
       id: 'sql',
@@ -63,15 +87,12 @@ export class DatabricksDatasource extends SqlDatasource {
     return this.sqlLanguageDefinition;
   }
 
-  async fetchFields(table: string, schema: string, catalog: string): Promise<SQLSelectableValue[]> {
-    const response: any = await this.postResource("columns", {table: catalog + "." + schema + "." + table});
-    const result: SQLSelectableValue[] = [];
-    for (let i = 0; i < response.length; i++) {
-      const column = response[i].name;
-      const type = response[i].type;
-      result.push({ label: column, value: column, type, ...getFieldConfig(type) });
+  async fetchFields(table: string | undefined, schema = this.defaultSchema, catalog = this.defaultCatalog): Promise<SQLSelectableValue[]> {
+    if (!table || !catalog || !schema) {
+      return [];
     }
-    return result;
+    const response: ColumnResponse[] = await this.postResource("columns", {table: `${catalog}.${schema}.${table}`});
+    return response.map(({name: column, type}) => ({ label: column, value: column, type, ...getFieldConfig(type) }));
   }
 
   getDB(): DB {
@@ -82,30 +103,10 @@ export class DatabricksDatasource extends SqlDatasource {
     return {
       init: () => Promise.resolve(true),
       catalogs: () => this.fetchCatalogs(),
-      schemas: async (catalog) => {
-        catalog = catalog || this.defaultCatalog;
-        if (!catalog) {
-          return [];
-        }
-        return this.fetchSchemas(catalog);
-      },
-      tables: async (catalog, schema) => {
-        catalog = catalog || this.defaultCatalog;
-        schema = schema || this.defaultSchema;
-        if (!catalog || !schema) {
-          return [];
-        }
-        return this.fetchTables(catalog, schema);
-      },
+      schemas: async (catalog) => this.fetchSchemas(catalog),
+      tables: async (catalog, schema) =>  this.fetchTables(catalog, schema),
       getEditorLanguageDefinition: () => this.getSqlLanguageDefinition(this.db),
-      fields: async (catalog, schema, table) => {
-        catalog = catalog || this.defaultCatalog;
-        schema = schema || this.defaultSchema;
-        if (!table || !catalog || !schema) {
-          return [];
-        }
-        return this.fetchFields(table, schema, catalog);
-      },
+      fields: async (catalog, schema, table) => this.fetchFields(table, schema, catalog),
       validateQuery: (query) =>
         Promise.resolve({ isError: false, isValid: true, query, error: '', rawSql: query.rawSql }),
       dsID: () => this.id,
@@ -117,3 +118,5 @@ export class DatabricksDatasource extends SqlDatasource {
     };
   }
 }
+
+

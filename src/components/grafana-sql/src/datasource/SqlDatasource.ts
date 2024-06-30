@@ -37,6 +37,22 @@ import migrateAnnotation from '../utils/migration';
 
 import { isSqlDatasourceDatabaseSelectionFeatureFlagEnabled } from './../components/QueryEditorFeatureFlag.utils';
 
+type Schema = {
+    name: string;
+};
+type Catalog = {
+  name: string;
+  schemas: {
+    [key: string]: Schema;
+  }
+};
+
+type CatalogsSchemas = {
+  catalogs: {
+    [key: string]: Catalog;
+  }
+}
+
 export abstract class SqlDatasource extends DataSourceWithBackend<SQLQuery, SQLOptions> {
   id: number;
   responseParser: ResponseParser;
@@ -46,6 +62,7 @@ export abstract class SqlDatasource extends DataSourceWithBackend<SQLQuery, SQLO
   preconfiguredDatabase: string;
   defaultCatalog: string | undefined;
   defaultSchema: string | undefined;
+  fetchedCatalogsSchemas: CatalogsSchemas;
 
   constructor(
     instanceSettings: DataSourceInstanceSettings<SQLOptions>,
@@ -60,6 +77,7 @@ export abstract class SqlDatasource extends DataSourceWithBackend<SQLQuery, SQLO
     this.db = this.getDB();
     this.defaultSchema = undefined;
     this.defaultCatalog = undefined;
+    this.fetchedCatalogsSchemas = { catalogs: {} };
     /*
       The `settingsData.database` will be defined if a default database has been defined in either
       1) the ConfigurationEditor.tsx, OR 2) the provisioning config file, either under `jsondata.database`, or simply `database`.
