@@ -29,7 +29,7 @@ export function SqlQueryEditor({
     const [isQueryRunnable, setIsQueryRunnable] = useState(true);
     const db = datasource.getDB();
 
-    const {defaultSchema, defaultCatalog} = datasource;
+    let {defaultSchema, defaultCatalog, unityCatalogEnabled} = datasource;
     const dialect = queryHeaderProps?.dialect ?? 'other';
     const {loading, error} = useAsync(async () => {
         return () => {
@@ -49,6 +49,7 @@ export function SqlQueryEditor({
     const [queryToValidate, setQueryToValidate] = useState(queryWithDefaults);
 
     useEffect(() => {
+        unityCatalogEnabled = datasource.unityCatalogEnabled;
         return () => {
             if (datasource.getDB(datasource.id).dispose !== undefined) {
                 datasource.getDB(datasource.id).dispose!();
@@ -113,6 +114,7 @@ export function SqlQueryEditor({
                     queryRowFilter={queryRowFilter}
                     onValidate={setIsQueryRunnable}
                     range={range}
+                    unityCatalogEnabled={unityCatalogEnabled}
                 />
             )}
 

@@ -63,6 +63,8 @@ export abstract class SqlDatasource extends DataSourceWithBackend<SQLQuery, SQLO
   defaultCatalog: string | undefined;
   defaultSchema: string | undefined;
   fetchedCatalogsSchemas: CatalogsSchemas;
+  unityCatalogEnabled: boolean;
+  initialized: boolean;
 
   constructor(
     instanceSettings: DataSourceInstanceSettings<SQLOptions>,
@@ -78,6 +80,8 @@ export abstract class SqlDatasource extends DataSourceWithBackend<SQLQuery, SQLO
     this.defaultSchema = undefined;
     this.defaultCatalog = undefined;
     this.fetchedCatalogsSchemas = { catalogs: {} };
+    this.unityCatalogEnabled = false;
+    this.initialized = false;
     /*
       The `settingsData.database` will be defined if a default database has been defined in either
       1) the ConfigurationEditor.tsx, OR 2) the provisioning config file, either under `jsondata.database`, or simply `database`.

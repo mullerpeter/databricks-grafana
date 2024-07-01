@@ -17,7 +17,6 @@ export class DatabricksDatasource extends SqlDatasource {
 
   constructor(instanceSettings: DataSourceInstanceSettings<DatabricksDataSourceOptions>) {
     super(instanceSettings);
-    this.setDefaults();
   }
 
   getQueryModel(target?: SQLQuery, templateSrv?: TemplateSrv, scopedVars?: ScopedVars): DatabricksQueryModel {
@@ -25,12 +24,23 @@ export class DatabricksDatasource extends SqlDatasource {
   }
 
   async setDefaults(): Promise<void> {
+    await this.setUnityCatalogEnabled();
     const defaults: any = await this.postResource("defaults", {})
-    this.defaultCatalog = defaults.defaultCatalog;
+    this.defaultCatalog = this.unityCatalogEnabled ? defaults.defaultCatalog : 'spark_catalog';
     this.defaultSchema = defaults.defaultSchema;
     if (this.defaultCatalog) {
       this.addToFetchedCatalogsSchemas(this.defaultCatalog, this.defaultSchema);
     }
+    this.initialized = true;
+  }
+
+  async setUnityCatalogEnabled(): Promise<boolean> {
+    if (this.initialized) {
+        return this.unityCatalogEnabled;
+    }
+    const catalogs = await this.postResource("catalogs", {}) as string[];
+    this.unityCatalogEnabled = !(catalogs.length === 1 && catalogs[0] === 'spark_catalog');
+    return this.unityCatalogEnabled;
   }
 
   addToFetchedCatalogsSchemas(catalog: string, schema: string | undefined): void {
@@ -46,25 +56,40 @@ export class DatabricksDatasource extends SqlDatasource {
   }
 
   async fetchTables(catalog = this.defaultCatalog, schema = this.defaultSchema): Promise<string[]> {
+    if (!this.initialized) {
+        await this.setDefaults();
+        catalog = catalog || this.defaultCatalog;
+        schema = schema || this.defaultSchema;
+    }
     if (!catalog || !schema) {
       return [];
     }
     if (!this.fetchedCatalogsSchemas?.catalogs[catalog]?.schemas[schema]) {
         return [];
     }
-    return await this.postResource("tables", {catalog: catalog, schema: schema})
+    return await this.postResource("tables", {catalog: this.unityCatalogEnabled ? catalog : undefined, schema: schema})
   }
 
   async fetchSchemas(catalog = this.defaultCatalog): Promise<string[]> {
+    if (!this.initialized) {
+      await this.setDefaults();
+      catalog = catalog || this.defaultCatalog;
+    }
     if (!catalog || !this.fetchedCatalogsSchemas || !this.fetchedCatalogsSchemas?.catalogs[catalog]) {
       return [];
     }
-    const schemas = await this.postResource("schemas", {catalog}) as string[];
+    const schemas = await this.postResource("schemas", {catalog: this.unityCatalogEnabled ? catalog : undefined}) as string[];
     schemas.forEach(schema => this.addToFetchedCatalogsSchemas(catalog, schema));
     return schemas;
   }
 
   async fetchCatalogs(): Promise<string[]> {
+    if (!this.initialized) {
+      await this.setDefaults();
+    }
+    if (!this.unityCatalogEnabled) {
+      return [];
+    }
     const catalogs = await this.postResource("catalogs", {}) as string[];
     catalogs.forEach(catalog => this.addToFetchedCatalogsSchemas(catalog, undefined));
     return catalogs;
@@ -88,10 +113,15 @@ export class DatabricksDatasource extends SqlDatasource {
   }
 
   async fetchFields(table: string | undefined, schema = this.defaultSchema, catalog = this.defaultCatalog): Promise<SQLSelectableValue[]> {
+    if (!this.initialized) {
+      await this.setDefaults();
+      catalog = catalog || this.defaultCatalog;
+      schema = schema || this.defaultSchema;
+    }
     if (!table || !catalog || !schema) {
       return [];
     }
-    const response: ColumnResponse[] = await this.postResource("columns", {table: `${catalog}.${schema}.${table}`});
+    const response: ColumnResponse[] = await this.postResource("columns", {table: this.unityCatalogEnabled ? `${catalog}.${schema}.${table}` : `${schema}.${table}`});
     return response.map(({name: column, type}) => ({ label: column, value: column, type, ...getFieldConfig(type) }));
   }
 
@@ -103,6 +133,7 @@ export class DatabricksDatasource extends SqlDatasource {
     return {
       init: () => Promise.resolve(true),
       catalogs: () => this.fetchCatalogs(),
+      checkIfUnityCatalogEnabled: () => this.setUnityCatalogEnabled(),
       schemas: async (catalog) => this.fetchSchemas(catalog),
       tables: async (catalog, schema) =>  this.fetchTables(catalog, schema),
       getEditorLanguageDefinition: () => this.getSqlLanguageDefinition(this.db),

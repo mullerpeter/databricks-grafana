@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {useCopyToClipboard} from 'react-use';
 import {v4 as uuidv4} from 'uuid';
 
@@ -12,7 +12,6 @@ import {DB, QUERY_FORMAT_OPTIONS, QueryFormat, QueryRowFilter, SQLDialect, SQLQu
 
 import {ConfirmModal} from './ConfirmModal';
 import {SchemaSelector} from './SchemaSelector';
-import {isSqlDatasourceDatabaseSelectionFeatureFlagEnabled} from './QueryEditorFeatureFlag.utils';
 import {TableSelector} from './TableSelector';
 import {CatalogSelector} from "./CatalogSelector";
 
@@ -127,18 +126,17 @@ export function QueryHeader({
         onChange(next);
     };
 
-    const catalogDropdownIsAvailable = () => {
-        if (dialect === 'influx') {
-            return false;
-        }
-        // If the feature flag is DISABLED, && the datasource is Postgres (`dialect = 'postgres`),
-        // we want to hide the dropdown - as per previous behavior.
-        if (!isSqlDatasourceDatabaseSelectionFeatureFlagEnabled() && dialect === 'postgres') {
-            return false;
+    const [unityCatalogEnabled, setUnityCatalogEnabled] = useState(false);
+
+    useEffect( () => {
+        const asyncCall = async () => {
+            const result = await db.checkIfUnityCatalogEnabled();
+            setUnityCatalogEnabled(result);
         }
 
-        return true;
-    };
+        asyncCall()
+            .catch(console.error);
+    }, []);
 
     const fillModeSelectOptions = [
         {
@@ -383,7 +381,7 @@ export function QueryHeader({
                 <>
                     <Space v={0.5}/>
                     <EditorRow>
-                        {catalogDropdownIsAvailable() && (
+                        {unityCatalogEnabled && (
                             <EditorField label="Catalog" width={25}>
                                 <CatalogSelector
                                     db={db}
@@ -397,20 +395,22 @@ export function QueryHeader({
                         <EditorField label="Schema" width={25}>
                             <SchemaSelector
                                 db={db}
-                                catalog={query.catalog || preconfiguredCatalog}
+                                catalog={query.catalog}
                                 schema={query.schema}
                                 dialect={dialect}
                                 preconfiguredSchema={preconfiguredSchema}
                                 onChange={onSchemaChange}
+                                unityCatalogEnabled={unityCatalogEnabled}
                             />
                         </EditorField>
                         <EditorField label="Table" width={25}>
                             <TableSelector
                                 db={db}
-                                catalog={query.catalog || preconfiguredCatalog}
+                                catalog={query.catalog}
                                 schema={query.schema}
                                 table={query.table}
                                 onChange={onTableChange}
+                                unityCatalogEnabled={unityCatalogEnabled}
                             />
                         </EditorField>
                     </EditorRow>

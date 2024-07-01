@@ -18,13 +18,14 @@ interface VisualEditorProps extends QueryEditorProps {
     db: DB;
     queryRowFilter: QueryRowFilter;
     onValidate: (isValid: boolean) => void;
+    unityCatalogEnabled: boolean;
 }
 
-export const VisualEditor = ({query, db, queryRowFilter, onChange, onValidate, range}: VisualEditorProps) => {
+export const VisualEditor = ({query, db, queryRowFilter, onChange, onValidate, range, unityCatalogEnabled}: VisualEditorProps) => {
     const state = useAsync(async () => {
-        const fields = await db.fields(query);
+        const fields = await db.fields(unityCatalogEnabled ? query.catalog : undefined, query.schema, query.table);
         return fields;
-    }, [db, query.catalog, query.schema, query.table]);
+    }, [db, query.catalog, query.schema, query.table, unityCatalogEnabled]);
 
     const fillModeSelectOptions = [
         {

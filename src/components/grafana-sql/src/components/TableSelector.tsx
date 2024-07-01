@@ -12,18 +12,19 @@ export interface TableSelectorProps extends ResourceSelectorProps {
   catalog: string | undefined;
   schema: string | undefined;
   onChange: (v: SelectableValue) => void;
+  unityCatalogEnabled: boolean;
 }
 
-export const TableSelector = ({ db, catalog, schema, table, className, onChange }: TableSelectorProps) => {
+export const TableSelector = ({ db, catalog, schema, table, className, onChange, unityCatalogEnabled }: TableSelectorProps) => {
   const state = useAsync(async () => {
     // No need to attempt to fetch tables for an unknown dataset.
-    if (!catalog || !schema) {
+    if (unityCatalogEnabled && (!catalog || !schema)) {
       return [];
     }
 
-    const tables = await db.tables(catalog, schema);
+    const tables = await db.tables(unityCatalogEnabled ? catalog : undefined, schema);
     return tables.map(toOption);
-  }, [catalog, schema]);
+  }, [catalog, schema, unityCatalogEnabled]);
 
   useEffect(() => {
     if (!table) {
@@ -38,7 +39,7 @@ export const TableSelector = ({ db, catalog, schema, table, className, onChange 
         }
       }
     }
-  }, [state.value, onChange]);
+  }, [state.value]);
 
   return (
     <Select

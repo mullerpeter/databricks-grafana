@@ -15,9 +15,10 @@ export interface SchemaSelectorProps extends ResourceSelectorProps {
   preconfiguredSchema: string | undefined;
   dialect: SQLDialect;
   onChange: (v: SelectableValue) => void;
+  unityCatalogEnabled: boolean;
 }
 
-export const SchemaSelector = ({ catalog, schema, db, dialect, onChange, preconfiguredSchema }: SchemaSelectorProps) => {
+export const SchemaSelector = ({ catalog, schema, db, dialect, onChange, preconfiguredSchema, unityCatalogEnabled }: SchemaSelectorProps) => {
   /* 
     The behavior of this component - for MSSQL and MySQL datasources - is based on whether the user chose to create a datasource
     with or without a default database (preconfiguredSchema). If the user configured a default database, this selector
@@ -44,9 +45,9 @@ export const SchemaSelector = ({ catalog, schema, db, dialect, onChange, preconf
     }
 
     // Otherwise, fetch all databases available to the datasource.
-    const schemas = await db.schemas(catalog);
+    const schemas = await db.schemas(unityCatalogEnabled ? catalog : undefined);
     return schemas.map(toOption);
-  }, [catalog]);
+  }, [catalog, unityCatalogEnabled]);
 
   useEffect(() => {
       // Set default dataset when values are fetched

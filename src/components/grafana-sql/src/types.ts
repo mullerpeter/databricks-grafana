@@ -135,6 +135,7 @@ export interface SQLSelectableValue extends SelectableValue {
 export interface DB {
   init?: (datasourceId?: string) => Promise<boolean>;
   catalogs: () => Promise<string[]>;
+  checkIfUnityCatalogEnabled: () => Promise<boolean>;
   schemas: (catalog?: string) => Promise<string[]>;
   tables: (catalog?: string, schema?: string) => Promise<string[]>;
   fields: (catalog?: string, schema?: string, table?: string) => Promise<SQLSelectableValue[]>;
