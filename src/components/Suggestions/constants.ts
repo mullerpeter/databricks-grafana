@@ -44,14 +44,16 @@ export const macros = [
     {
         id: "$__timeFrom()",
         name: "$__timeFrom()",
-        text: "$__timeFrom()",
+        text: "$__timeFrom",
+        args: [],
         type: MacroType.Value,
         description: "Will be replaced by the start of the selected timerange. i.e. '2021-12-31 23:00:00'"
     },
     {
         id: "$__timeTo()",
         name: "$__timeTo()",
-        text: "$__timeTo()",
+        text: "$__timeTo",
+        args: [],
         type: MacroType.Value,
         description: "Will be replaced by the end of the selected timerange. i.e. '2021-12-31 23:00:00'"
     },
@@ -65,28 +67,32 @@ export const macros = [
     {
         id: "$__unixEpochFrom()",
         name: "$__unixEpochFrom()",
-        text: "$__unixEpochFrom()",
+        text: "$__unixEpochFrom",
+        args: [],
         type: MacroType.Value,
         description: "Will be replaced by the start of the selected timerange as a Unix Timestamp. i.e. `1640988000`"
     },
     {
         id: "$__unixEpochTo()",
         name: "$__unixEpochTo()",
-        text: "$__unixEpochTo()",
+        text: "$__unixEpochTo",
+        args: [],
         type: MacroType.Value,
         description: "Will be replaced by the end of the selected timerange as a Unix Timestamp. i.e. `1641074399` "
     },
     {
         id: "$__unixEpochNanoFrom()",
         name: "$__unixEpochNanoFrom()",
-        text: "$__unixEpochNanoFrom()",
+        text: "$__unixEpochNanoFrom",
+        args: [],
         type: MacroType.Value,
         description: "Will be replaced by the start of the selected timerange as a nanosecond Timestamp. i.e. `1640988000506935834`"
     },
     {
         id: "$__unixEpochNanoTo()",
         name: "$__unixEpochNanoTo()",
-        text: "$__unixEpochNanoTo()",
+        text: "$__unixEpochNanoTo",
+        args: [],
         type: MacroType.Value,
         description: "Will be replaced by the end of the selected timerange as a nanosecond Timestamp. i.e. `1641074399589026839`"
     },
