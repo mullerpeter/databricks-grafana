@@ -1,5 +1,5 @@
-import React, {ChangeEvent, FormEvent, PureComponent} from 'react';
-import { InlineField, Input, SecretInput, InlineSwitch, Alert, Select } from '@grafana/ui';
+import React, {ChangeEvent, PureComponent} from 'react';
+import { InlineField, Input, SecretInput, Select } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
 import { DatabricksDataSourceOptions, DatabricksSecureJsonData } from '../../types';
 
@@ -73,17 +73,6 @@ export class ConfigEditor extends PureComponent<Props, State> {
       jsonData: {
         ...options.jsonData,
         path: event.target.value.replace(/^\//, ''),
-      },
-    });
-  };
-
-  onAutoCompletionChange = (event: FormEvent<HTMLInputElement>) => {
-    const { onOptionsChange, options } = this.props;
-    onOptionsChange({
-      ...options,
-      jsonData: {
-        ...options.jsonData,
-        autoCompletion: event.currentTarget.checked,
       },
     });
   };
@@ -239,22 +228,6 @@ export class ConfigEditor extends PureComponent<Props, State> {
                   />
                 </InlineField>
             )}
-          </div>
-          <div className="gf-form-group">
-            <Alert title="Code Auto Completion (Experimental Feature)" severity="info">
-              <div>
-                Auto Completion for the code editor is still in development. Basic functionality is implemented,
-                but might not always work perfectly. When enabled, the editor will make requests to Databricks
-                while typing to get the available catalogs, schemas, tables and columns. Only the tables present
-                in the current query will be fetched.
-              </div>
-            </Alert>
-            <InlineField label="Code Auto Completion" labelWidth={30} tooltip="Enable code auto completion for SQL queries.">
-              <InlineSwitch
-                  value={jsonData.autoCompletion || false}
-                  onChange={this.onAutoCompletionChange}
-              />
-            </InlineField>
           </div>
         </>
     );

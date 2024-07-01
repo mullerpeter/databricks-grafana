@@ -43,7 +43,11 @@ export class DatabricksDatasource extends SqlDatasource {
     return this.unityCatalogEnabled;
   }
 
-  addToFetchedCatalogsSchemas(catalog: string, schema: string | undefined): void {
+  addToFetchedCatalogsSchemas(catalog: string | undefined, schema: string | undefined): void {
+    catalog = catalog || this.defaultCatalog;
+    if (!catalog) {
+      return;
+    }
     if (!this.fetchedCatalogsSchemas.catalogs[catalog]) {
       this.fetchedCatalogsSchemas.catalogs[catalog] = {
         name: catalog,

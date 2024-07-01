@@ -7,7 +7,6 @@ export interface DatabricksDataSourceOptions extends SQLOptions {
   hostname?: string;
   port?: string;
   path?: string;
-  autoCompletion?: boolean;
   authenticationMethod?: string;
   clientId?: string;
   externalCredentialsUrl?: string;
