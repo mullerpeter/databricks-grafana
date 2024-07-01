@@ -49,6 +49,11 @@ export enum QueryFormat {
   Timeseries = 'time_series',
   Table = 'table',
 }
+interface QuerySettings {
+  convertLongToWide?: boolean
+  fillMode?: number
+  fillValue?: number
+}
 
 export interface SQLQuery extends DataQuery {
   alias?: string;
@@ -60,6 +65,7 @@ export interface SQLQuery extends DataQuery {
   sql?: SQLExpression;
   editorMode?: EditorMode;
   rawQuery?: boolean;
+  querySettings?: QuerySettings;
   // Deprecated: kept for backward compatibility
   rawSqlQuery?: string;
 }

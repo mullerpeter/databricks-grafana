@@ -219,8 +219,15 @@ func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataReques
 	return response, nil
 }
 
+type querySettings struct {
+	ConvertLongToWide bool          `json:"convertLongToWide"`
+	FillMode          data.FillMode `json:"fillMode"`
+	FillValue         float64       `json:"fillValue"`
+}
+
 type queryModel struct {
-	RawSql string `json:"rawSql"`
+	RawSql        string        `json:"rawSql"`
+	QuerySettings querySettings `json:"querySettings"`
 }
 
 func (d *Datasource) query(_ context.Context, pCtx backend.PluginContext, query backend.DataQuery) backend.DataResponse {
@@ -304,6 +311,15 @@ func (d *Datasource) query(_ context.Context, pCtx backend.PluginContext, query 
 		log.DefaultLogger.Info("FrameFromRows", "err", err)
 		response.Error = err
 		return response
+	}
+
+	if qm.QuerySettings.ConvertLongToWide {
+		wideFrame, err := data.LongToWide(frame, &data.FillMissing{Value: qm.QuerySettings.FillValue, Mode: qm.QuerySettings.FillMode})
+		if err != nil {
+			log.DefaultLogger.Info("LongToWide conversion error", "err", err)
+		} else {
+			frame = wideFrame
+		}
 	}
 
 	// add the frames to the response.
