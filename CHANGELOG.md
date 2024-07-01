@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.2.9
+## 1.3.0
+
+- Feature: Move to grafana/sql for query editor
+
+---
+
+### 1.2.9
 
 - Bugfix: Only init Suggestion Provider when editor with AutoComplete is active
 
