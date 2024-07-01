@@ -11,9 +11,12 @@ Grafana Databricks integration allowing direct connection to Databricks to query
 ### Set up the Databricks Data Source
 #### Requirements
 
-- Grafana Version >= 9.1.0
+For the latest version of the plugin the following requirements need to be met:
+- Grafana Version >= 10.4.1
 
-If you are using an earlier Grafana version try the [v1.1.7](https://github.com/mullerpeter/databricks-grafana/releases/tag/v1.1.7) release of this plugin, which is the latest release supporting Grafana > 7.0
+If you are using an earlier Grafana version try one of the following Plugin Versions:
+- [v1.1.7](https://github.com/mullerpeter/databricks-grafana/releases/tag/v1.1.7) (Supports Grafana Version >= 7.0)
+- [v1.2.9](https://github.com/mullerpeter/databricks-grafana/releases/tag/v1.2.9) (Supports Grafana Version >= 9.1.0)
 
 #### Install the Data Source
 
@@ -72,7 +75,6 @@ Available configuration fields are as follows:
 | Client Secret         | Databricks Service Principal Client Secret. (only if OAuth / OAuth2 is chosen as Auth Method)                |
 | Access Token          | Personal Access Token for Databricks. (only if PAT is chosen as Auth Method)                                 |
 | OAuth2 Token Endpoint | URL of OAuth2 endpoint (only if OAuth2 Client Credentials Authentication is chosen as Auth Method)           |
-| Code Auto Completion  | If enabled the SQL editor will fetch catalogs/schemas/tables/columns from Databricks to provide suggestions. |
 
 ### Supported Macros
 
@@ -80,54 +82,77 @@ All variables used in the SQL query get replaced by their respective values. See
 
 Additionally the following Macros can be used within a query to simplify syntax and allow for dynamic parts.
 
-| Macro example                | Description                                                                                                                                       |
-|------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| `$__timeFilter(time_column)` | Will be replaced by an expression to filter on the selected timerange. i.e. `time_column BETWEEN '2021-12-31 23:00:00' AND '2022-01-01 22:59:59'` |
-| `$__timeWindow(time_column)` | Will be replaced by an expression to group by the selected interval. i.e. `window(time_column, '2 HOURS')`                                        |
- | `$__timeFrom`                | Will be replaced by the start of the selected timerange. i.e. `'2021-12-31 23:00:00'`                                                             |
- | `$__timeTo`                  | Will be replaced by the end of the selected timerange. i.e. `'2022-01-01 22:59:59'`                                                               |
+| Macro example                          | Description                                                                                                                                                                  |
+|----------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `$__timeFilter(time_column)`           | Will be replaced by an expression to filter on the selected timerange. i.e. `time_column BETWEEN '2021-12-31 23:00:00' AND '2022-01-01 22:59:59'`                            |
+| `$__timeWindow(time_column)`           | Will be replaced by an expression to group by the selected interval. i.e. `window(time_column, '2 HOURS')`                                                                   |
+| `$__unixEpochFilter(time_column)`      | Will be replaced by an expression to filter on the selected timerange based on Unix Timestamps. i.e. `time_column BETWEEN 1640988000 AND 1641074399`                         |
+| `$__unixEpochNanoFilter(time_column)`  | Will be replaced by an expression to filter on the selected timerange based on nanosecond Timestamps. i.e. `time_column BETWEEN 1640988000506935834 AND 1641074399589026839` |
+| `$__timeGroup(time_column,'interval')` | Will be replaced by a window expression i.e. `window(time_column, 'interval')`                                                                                               |
+| `$__timeFrom`                          | Will be replaced by the start of the selected timerange. i.e. `'2021-12-31 23:00:00'`                                                                                        |
+| `$__timeTo`                            | Will be replaced by the end of the selected timerange. i.e. `'2022-01-01 22:59:59'`                                                                                          |
+| `$__timeFrom()`                        | Will be replaced by the start of the selected timerange. i.e. `'2021-12-31 23:00:00'` (via `FROM_UNIXTIME(..)`)                                                              |
+| `$__timeTo()`                          | Will be replaced by the end of the selected timerange. i.e. `'2022-01-01 22:59:59'` (via `FROM_UNIXTIME(..)`)                                                                |
+| `$____interval_long`                   | Converts Grafana’s interval to INTERVAL DAY TO SECOND literal. i.e. `1 HOUR 20 MINUTES` This is applicable to Spark SQL window grouping expression.                          |
+| `$__unixEpochFrom()`                   | Will be replaced by the start of the selected timerange as a Unix Timestamp. i.e. `1640988000`                                                                               |
+| `$__unixEpochTo()`                     | Will be replaced by the end of the selected timerange as a Unix Timestamp. i.e. `1641074399`                                                                                 |
+| `$__unixEpochNanoFrom()`               | Will be replaced by the start of the selected timerange as a nanosecond Timestamp. i.e. `1640988000506935834`                                                                |
+| `$__unixEpochNanoTo()`                 | Will be replaced by the end of the selected timerange as a nanosecond Timestamp. i.e. `1641074399589026839`                                                                  |    
+
 
 ## Write a query
 
-Use the query editor to write a query, you can use sparksql syntax according to the [Databricks SQL Reference](https://docs.databricks.com/sql/language-manual/index.html).
+You can write a query in two ways: using the visual query builder or the code editor.
+
+### Visual Query Builder
+
+Simple queries can be created using the visual query builder. The visual query builder will automatically fetch the avaible catalogs, schemas, tables & columns from the Databricks Instance. The build query will be displayed in the preview window. 
+
+Support for complex queries is limited, for more complex queries use the code editor, which also supports all available macros.
+
+![img.png](img/visual_query_editor.png)
+
+### Code Editor
+
+Use the code editor to write a query, you can use sparksql syntax according to the [Databricks SQL Reference](https://docs.databricks.com/sql/language-manual/index.html). The code editor supports all available macros and code autocompletion.
+
+![img.png](img/code_query_editor.png)
 
 #### Long to Wide Transformation
 
-By default, the plugin will return the results in wide format. This behavior can be changed in the advanced options of the query editor.
+Both the Visual Query Builder and the Code Editor support the transformation of long to wide tables. If enabled this transformation will be executed on the Grafana backend before the data is returned to the frontend. This functionality is useful incase you want the query to return multiple time series, as not all Grafana visualizations support long format tables for multiple metrics.
 
-![img.png](img/advanced_options.png)
-
-#### Code Auto Completion
-
-Auto Completion for the code editor is still in development. Basic functionality is implemented,
-but might not always work perfectly. When enabled, the editor will make requests to Databricks
-while typing to get the available catalogs, schemas, tables and columns. Only the tables present
-in the current query will be fetched.
-Additionally, the editor will also make suggestions for 
-Databricks SQL functions & keywords and Grafana macros.
-
-The feature can be enabled in the Datasource Settings.
-
-<img alt="img.png" src="img/autocomplete-02.png" width="52%"/>
-<img alt="img.png" src="img/autocomplete-01.png" width="40%"/>
 
 ### Examples
 #### Single Value Time Series
 
 ```sparksql
-SELECT $__time(time_column), avg(value_column)
-FROM catalog.default.table_name 
-WHERE $__timeFilter(time_column) 
-GROUP BY $__timeWindow(time_column);
+SELECT
+   window.start,
+   avg(value_column)
+FROM
+   catalog.default.table_name
+WHERE
+   $__timeFilter(time_column)
+GROUP BY
+   $__timeWindow(time_column);
 ```
 #### Multiple Values Time Series
 
 ```sparksql
-SELECT window.start, avg(o_totalprice), o_orderstatus
-FROM samples.tpch.orders
-WHERE $__timeFilter(o_orderdate)
-GROUP BY $__timeWindow(o_orderdate), o_orderstatus
-ORDER BY start ASC;
+SELECT
+    window.start,
+    avg(CAST(o_totalprice AS DOUBLE)),
+    o_orderstatus
+FROM
+    samples.tpch.orders
+WHERE
+    $__timeFilter(o_orderdate)
+GROUP BY
+    $__timeWindow(o_orderdate),
+    o_orderstatus
+ORDER BY
+    start;
 ```
 
 # Development

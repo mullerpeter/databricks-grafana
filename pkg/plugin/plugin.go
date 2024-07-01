@@ -226,7 +226,7 @@ type querySettings struct {
 }
 
 type queryModel struct {
-	RawSqlQuery   string        `json:"rawSqlQuery"`
+	RawSql        string        `json:"rawSql"`
 	QuerySettings querySettings `json:"querySettings"`
 }
 
@@ -244,7 +244,7 @@ func (d *Datasource) query(_ context.Context, pCtx backend.PluginContext, query 
 		return response
 	}
 
-	queryString := replaceMacros(qm.RawSqlQuery, query)
+	queryString := replaceMacros(qm.RawSql, query)
 
 	// Check if multiple statements are present in the query
 	// If so, split them and execute them individually
@@ -320,7 +320,6 @@ func (d *Datasource) query(_ context.Context, pCtx backend.PluginContext, query 
 		} else {
 			frame = wideFrame
 		}
-
 	}
 
 	// add the frames to the response.

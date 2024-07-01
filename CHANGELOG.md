@@ -1,6 +1,16 @@
 # Changelog
 
-## 1.2.9
+## 1.3.0
+
+- ***Minimum Grafana version increased to 10.4.1***
+- Switch to @grafana/sql as query editor
+  - Adds Visual Query Builder
+  - Moves to default Grafana SQL Auto Completion
+- Adds additional macros
+
+---
+
+### 1.2.9
 
 - Bugfix: Only init Suggestion Provider when editor with AutoComplete is active
 

@@ -90,23 +90,68 @@ func replaceMacros(sqlQuery string, query backend.DataQuery) string {
 		}
 	}
 
-	rgx = regexp.MustCompile(`\$__timeFilter\(([a-zA-Z0-9_-]+)\)`)
-	if rgx.MatchString(queryString) {
-		rs := rgx.FindStringSubmatch(queryString)
-		timeColumnName := rs[1]
-		timeRangeFilter := fmt.Sprintf("%s BETWEEN '%s' AND '%s'",
-			timeColumnName,
-			query.TimeRange.From.UTC().Format("2006-01-02 15:04:05"),
-			query.TimeRange.To.UTC().Format("2006-01-02 15:04:05"),
-		)
-		queryString = rgx.ReplaceAllString(queryString, timeRangeFilter)
+	type timeGroupMacroType struct {
+		macro       string
+		replacement string
 	}
 
-	queryString = strings.ReplaceAll(queryString, "$__timeFrom", query.TimeRange.From.UTC().Format("2006-01-02 15:04:05"))
+	timeGroupMacros := []timeGroupMacroType{
+		{`\$__timeGroup\(([a-zA-Z0-9_-]+),'([a-zA-Z0-9_-]+)'\)`, "window(%s, '%s')"},
+	}
 
-	queryString = strings.ReplaceAll(queryString, "$__timeTo", query.TimeRange.To.UTC().Format("2006-01-02 15:04:05"))
+	for _, timeGroupMacro := range timeGroupMacros {
+		rgx = regexp.MustCompile(timeGroupMacro.macro)
+		if rgx.MatchString(queryString) {
+			rs := rgx.FindStringSubmatch(queryString)
+			timeColumnName := rs[1]
+			interval := rs[2]
+			queryString = rgx.ReplaceAllString(queryString, fmt.Sprintf(timeGroupMacro.replacement, timeColumnName, interval))
+		}
 
-	queryString = strings.ReplaceAll(queryString, "$__interval", interval_string)
+	}
+
+	type timeFilterMacroType struct {
+		macro       string
+		replacement string
+		from        string
+		to          string
+	}
+	timefilterMacros := []timeFilterMacroType{
+		{`\$__timeFilter\(([a-zA-Z0-9_-]+)\)`, "%s BETWEEN '%s' AND '%s'", query.TimeRange.From.UTC().Format("2006-01-02 15:04:05"), query.TimeRange.To.UTC().Format("2006-01-02 15:04:05")},
+		{`\$__unixEpochNanoFilter\(([a-zA-Z0-9_-]+)\)`, "%s BETWEEN %s AND %s", fmt.Sprintf("%d", query.TimeRange.From.UnixNano()), fmt.Sprintf("%d", query.TimeRange.To.UnixNano())},
+		{`\$__unixEpochFilter\(([a-zA-Z0-9_-]+)\)`, "%s BETWEEN %s AND %s", fmt.Sprintf("%d", query.TimeRange.From.Unix()), fmt.Sprintf("%d", query.TimeRange.To.Unix())},
+	}
+
+	for _, timefilterMacro := range timefilterMacros {
+		rgx = regexp.MustCompile(timefilterMacro.macro)
+		if rgx.MatchString(queryString) {
+			rs := rgx.FindStringSubmatch(queryString)
+			timeColumnName := rs[1]
+			timeRangeFilter := fmt.Sprintf(timefilterMacro.replacement,
+				timeColumnName,
+				timefilterMacro.from,
+				timefilterMacro.to,
+			)
+			queryString = rgx.ReplaceAllString(queryString, timeRangeFilter)
+		}
+	}
+
+	simpleMacros := map[string]string{
+		"$__timeFrom()":          fmt.Sprintf("FROM_UNIXTIME(%d)", query.TimeRange.From.Unix()),
+		"$__timeTo()":            fmt.Sprintf("FROM_UNIXTIME(%d)", query.TimeRange.To.Unix()),
+		"$____interval_long":     interval_string,
+		"$__unixEpochFrom()":     fmt.Sprintf("%d", query.TimeRange.From.Unix()),
+		"$__unixEpochTo()":       fmt.Sprintf("%d", query.TimeRange.To.Unix()),
+		"$__unixEpochNanoFrom()": fmt.Sprintf("%d", query.TimeRange.From.UnixNano()),
+		"$__unixEpochNanoTo()":   fmt.Sprintf("%d", query.TimeRange.To.UnixNano()),
+		"$__timeFrom":            query.TimeRange.From.UTC().Format("2006-01-02 15:04:05"),
+		"$__timeTo":              query.TimeRange.To.UTC().Format("2006-01-02 15:04:05"),
+		"$__interval":            interval_string,
+	}
+
+	for macro, replacement := range simpleMacros {
+		queryString = strings.ReplaceAll(queryString, macro, replacement)
+	}
 
 	return queryString
 }

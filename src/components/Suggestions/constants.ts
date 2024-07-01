@@ -1,91 +1,109 @@
-interface SuggestionConfig {
-    keywords: string[]
-    templateVariables: boolean
-    functions: boolean
-    tables: boolean
-    columns: boolean
-}
+import {MacroType} from "@grafana/experimental";
 
-type SuggestionConfigs = {
-    [clause in Clause]: SuggestionConfig
-}
-
-export enum Clause {
-    START = "START",
-    SELECT = "SELECT",
-    USE = "USE",
-    FROM = "FROM",
-    WHERE = "WHERE",
-    GROUP_BY = "GROUP BY",
-    ORDER_BY = "ORDER BY",
-}
-
-export const defaultSuggestionConfig: SuggestionConfigs = {
-    "START": {
-        keywords: ["SELECT", "USE", "SHOW", "DESCRIBE", "DESC", "EXPLAIN", "LIST", "ANALYZE TABLE"],
-        templateVariables: false,
-        functions: false,
-        tables: false,
-        columns: false
+export const macros = [
+    {
+        id: "$__timeFilter(dateColumn)",
+        name: "$__timeFilter(dateColumn)",
+        text: "$__timeFilter",
+        args: ['column'],
+        type: MacroType.Filter,
+        description: "Will be replaced by a time range filter using the specified column name. For example, dateColumn BETWEEN FROM_UNIXTIME(1494410783) AND FROM_UNIXTIME(1494410983)"
     },
-    "SELECT": {
-        keywords: ["FROM"],
-        templateVariables: true,
-        functions: true,
-        tables: false,
-        columns: true
+    {
+        id: "$__unixEpochFilter(dateColumn)",
+        name: "$__unixEpochFilter(dateColumn)",
+        text: "$__unixEpochFilter",
+        args: ['column'],
+        type: MacroType.Filter,
+        description: "Will be replaced by a time range filter using the specified column name. For example, time_column BETWEEN 1640988000 AND 1641074399"
     },
-    "USE": {
-        keywords: ["CATALOG", "SCHEMA"],
-        templateVariables: false,
-        functions: false,
-        tables: true,
-        columns: false
+    {
+        id: "$__unixEpochNanoFilter(dateColumn)",
+        name: "$__unixEpochNanoFilter(dateColumn)",
+        text: "$__unixEpochNanoFilter",
+        args: ['column'],
+        type: MacroType.Filter,
+        description: "Will be replaced by a time range filter using the specified column name. For example, time_column BETWEEN 1640988000506935834 AND 1641074399589026839"
     },
-    "FROM": {
-        keywords: ["WHERE", "GROUP BY", "GROUP BY ALL", "QUALIFY", "HAVING", "WINDOW", "ORDER BY", "CLUSTER BY", "DISTRIBUTE BY", "SORT BY", "LIMIT", "OFFSET", "UNION", "TIMESTAMP AS OF", "VERSION AS OF", "LITERAL VIEW", "CROSS JOIN", "FULL JOIN", "FULL OUTER JOIN", "INNER JOIN", "JOIN", "LEFT JOIN", "LEFT OUTER JOIN", "LEFT SEMI JOIN", "OUTER JOIN", "RIGHT JOIN", "RIGHT OUTER JOIN", "RIGHT SEMI JOIN", "RIGHT ANTI JOIN", "LEFT ANTI JOIN", "ON"],
-        templateVariables: false,
-        functions: false,
-        tables: true,
-        columns: false
+    {
+        id: "$__timeWindow(dateColumn)",
+        name: "$__timeWindow(dateColumn)",
+        text: "$__timeWindow",
+        args: ['column'],
+        type: MacroType.Group,
+        description: "Will be replaced by a time range filter using the specified column name. For example, dateColumn BETWEEN FROM_UNIXTIME(1494410783) AND FROM_UNIXTIME(1494410983)"
     },
-    "WHERE": {
-        keywords: ["AND", "BETWEEN", "IS FALSE", "IS NOT FALSE", "IS NOT NULL", "IS NOT TRUE", "IS NULL", "IS TRUE", "NOT BETWEEN", "OR", "WHERE", "GROUP BY", "GROUP BY ALL", "QUALIFY", "HAVING", "WINDOW", "ORDER BY", "CLUSTER BY", "DISTRIBUTE BY", "SORT BY", "LIMIT", "OFFSET", "UNION", "TIMESTAMP AS OF", "VERSION AS OF", "LITERAL VIEW", "CROSS JOIN", "FULL JOIN", "FULL OUTER JOIN", "INNER JOIN", "JOIN", "LEFT JOIN", "LEFT OUTER JOIN", "LEFT SEMI JOIN", "OUTER JOIN", "RIGHT JOIN", "RIGHT OUTER JOIN", "RIGHT SEMI JOIN", "RIGHT ANTI JOIN", "LEFT ANTI JOIN", "ON"],
-        templateVariables: true,
-        functions: false,
-        tables: false,
-        columns: false
+    {
+        id: "$__timeGroup(time_column,'interval')",
+        name: "$__timeGroup(time_column,'interval')",
+        text: "$__timeGroup",
+        args: ['column', 'interval'],
+        type: MacroType.Group,
+        description: "Will be replaced by a window expression i.e. `window(time_column, 'interval')`"
     },
-    "GROUP BY": {
-        keywords: ["ORDER BY", "CLUSTER BY", "DISTRIBUTE BY", "SORT BY", "LIMIT", "OFFSET"],
-        templateVariables: true,
-        functions: false,
-        tables: false,
-        columns: false
+    {
+        id: "$__timeFrom()",
+        name: "$__timeFrom()",
+        text: "$__timeFrom",
+        args: [],
+        type: MacroType.Value,
+        description: "Will be replaced by the start of the selected timerange. i.e. '2021-12-31 23:00:00'"
     },
-    "ORDER BY": {
-        keywords: ["LIMIT", "OFFSET", "DESC", "ASC"],
-        templateVariables: true,
-        functions: false,
-        tables: false,
-        columns: false
+    {
+        id: "$__timeTo()",
+        name: "$__timeTo()",
+        text: "$__timeTo",
+        args: [],
+        type: MacroType.Value,
+        description: "Will be replaced by the end of the selected timerange. i.e. '2021-12-31 23:00:00'"
+    },
+    {
+        id: "$____interval_long",
+        name: "$____interval_long",
+        text: "$____interval_long",
+        type: MacroType.Value,
+        description: "Converts Grafana’s interval to INTERVAL DAY TO SECOND literal. i.e. 1 HOUR 20 MINUTES This is applicable to Spark SQL window grouping expression."
+    },
+    {
+        id: "$__unixEpochFrom()",
+        name: "$__unixEpochFrom()",
+        text: "$__unixEpochFrom",
+        args: [],
+        type: MacroType.Value,
+        description: "Will be replaced by the start of the selected timerange as a Unix Timestamp. i.e. `1640988000`"
+    },
+    {
+        id: "$__unixEpochTo()",
+        name: "$__unixEpochTo()",
+        text: "$__unixEpochTo",
+        args: [],
+        type: MacroType.Value,
+        description: "Will be replaced by the end of the selected timerange as a Unix Timestamp. i.e. `1641074399` "
+    },
+    {
+        id: "$__unixEpochNanoFrom()",
+        name: "$__unixEpochNanoFrom()",
+        text: "$__unixEpochNanoFrom",
+        args: [],
+        type: MacroType.Value,
+        description: "Will be replaced by the start of the selected timerange as a nanosecond Timestamp. i.e. `1640988000506935834`"
+    },
+    {
+        id: "$__unixEpochNanoTo()",
+        name: "$__unixEpochNanoTo()",
+        text: "$__unixEpochNanoTo",
+        args: [],
+        type: MacroType.Value,
+        description: "Will be replaced by the end of the selected timerange as a nanosecond Timestamp. i.e. `1641074399589026839`"
+    },
+    {
+        id: "$__interval_ms",
+        name: "$__interval_ms",
+        text: "$__interval_ms",
+        type: MacroType.Value,
     }
-}
-
-export const templateVariables = [
-    "$__timeFrom()",
-    "$__timeTo()",
-    "${__from}",
-    "${__from:date}",
-    "${__from:date:iso}",
-    "${__from:date:seconds}",
-    "${__to}",
-    "${__to:date}",
-    "${__to:date:iso}",
-    "${__to:date:seconds}",
-    "${__interval}",
-    "${__interval_ms}"
 ]
+
 export const functions = [
     "abs",
     "acos",

@@ -1,9 +1,9 @@
-import React, {ChangeEvent, FormEvent, PureComponent} from 'react';
-import { InlineField, Input, SecretInput, InlineSwitch, Alert, Select } from '@grafana/ui';
+import React, {ChangeEvent, PureComponent} from 'react';
+import { InlineField, Input, SecretInput, Select } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
-import { MyDataSourceOptions, MySecureJsonData } from '../../types';
+import { DatabricksDataSourceOptions, DatabricksSecureJsonData } from '../../types';
 
-interface Props extends DataSourcePluginOptionsEditorProps<MyDataSourceOptions> {}
+interface Props extends DataSourcePluginOptionsEditorProps<DatabricksDataSourceOptions> {}
 
 interface State {}
 
@@ -77,17 +77,6 @@ export class ConfigEditor extends PureComponent<Props, State> {
     });
   };
 
-  onAutoCompletionChange = (event: FormEvent<HTMLInputElement>) => {
-    const { onOptionsChange, options } = this.props;
-    onOptionsChange({
-      ...options,
-      jsonData: {
-        ...options.jsonData,
-        autoCompletion: event.currentTarget.checked,
-      },
-    });
-  };
-
   onResetDBConfig = () => {
     const { onOptionsChange, options } = this.props;
     onOptionsChange({
@@ -143,8 +132,8 @@ export class ConfigEditor extends PureComponent<Props, State> {
   render() {
     const { options } = this.props;
     const { secureJsonFields } = options;
-    const secureJsonData = (options.secureJsonData || {}) as MySecureJsonData;
-    const jsonData = (options.jsonData || {}) as MyDataSourceOptions;
+    const secureJsonData = (options.secureJsonData || {}) as DatabricksSecureJsonData;
+    const jsonData = (options.jsonData || {}) as DatabricksDataSourceOptions;
 
     return (
         <>
@@ -239,22 +228,6 @@ export class ConfigEditor extends PureComponent<Props, State> {
                   />
                 </InlineField>
             )}
-          </div>
-          <div className="gf-form-group">
-            <Alert title="Code Auto Completion (Experimental Feature)" severity="info">
-              <div>
-                Auto Completion for the code editor is still in development. Basic functionality is implemented,
-                but might not always work perfectly. When enabled, the editor will make requests to Databricks
-                while typing to get the available catalogs, schemas, tables and columns. Only the tables present
-                in the current query will be fetched.
-              </div>
-            </Alert>
-            <InlineField label="Code Auto Completion" labelWidth={30} tooltip="Enable code auto completion for SQL queries.">
-              <InlineSwitch
-                  value={jsonData.autoCompletion || false}
-                  onChange={this.onAutoCompletionChange}
-              />
-            </InlineField>
           </div>
         </>
     );
