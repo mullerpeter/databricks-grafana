@@ -79,12 +79,23 @@ All variables used in the SQL query get replaced by their respective values. See
 
 Additionally the following Macros can be used within a query to simplify syntax and allow for dynamic parts.
 
-| Macro example                | Description                                                                                                                                       |
-|------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| `$__timeFilter(time_column)` | Will be replaced by an expression to filter on the selected timerange. i.e. `time_column BETWEEN '2021-12-31 23:00:00' AND '2022-01-01 22:59:59'` |
-| `$__timeWindow(time_column)` | Will be replaced by an expression to group by the selected interval. i.e. `window(time_column, '2 HOURS')`                                        |
- | `$__timeFrom`                | Will be replaced by the start of the selected timerange. i.e. `'2021-12-31 23:00:00'`                                                             |
- | `$__timeTo`                  | Will be replaced by the end of the selected timerange. i.e. `'2022-01-01 22:59:59'`                                                               |
+| Macro example                          | Description                                                                                                                                                                  |
+|----------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `$__timeFilter(time_column)`           | Will be replaced by an expression to filter on the selected timerange. i.e. `time_column BETWEEN '2021-12-31 23:00:00' AND '2022-01-01 22:59:59'`                            |
+| `$__timeWindow(time_column)`           | Will be replaced by an expression to group by the selected interval. i.e. `window(time_column, '2 HOURS')`                                                                   |
+| `$__unixEpochFilter(time_column)`      | Will be replaced by an expression to filter on the selected timerange based on Unix Timestamps. i.e. `time_column BETWEEN 1640988000 AND 1641074399`                         |
+| `$__unixEpochNanoFilter(time_column)`  | Will be replaced by an expression to filter on the selected timerange based on nanosecond Timestamps. i.e. `time_column BETWEEN 1640988000506935834 AND 1641074399589026839` |
+| `$__timeGroup(time_column,'interval')` | Will be replaced by a window expression i.e. `window(time_column, 'interval')`                                                                                               |
+| `$__timeFrom`                          | Will be replaced by the start of the selected timerange. i.e. `'2021-12-31 23:00:00'`                                                                                        |
+| `$__timeTo`                            | Will be replaced by the end of the selected timerange. i.e. `'2022-01-01 22:59:59'`                                                                                          |
+| `$__timeFrom()`                        | Will be replaced by the start of the selected timerange. i.e. `'2021-12-31 23:00:00'` (via `FROM_UNIXTIME(..)`)                                                              |
+| `$__timeTo()`                          | Will be replaced by the end of the selected timerange. i.e. `'2022-01-01 22:59:59'` (via `FROM_UNIXTIME(..)`)                                                                |
+| `$____interval_long`                   | Converts Grafana’s interval to INTERVAL DAY TO SECOND literal. i.e. `1 HOUR 20 MINUTES` This is applicable to Spark SQL window grouping expression.                          |
+| `$__unixEpochFrom()`                   | Will be replaced by the start of the selected timerange as a Unix Timestamp. i.e. `1640988000`                                                                               |
+| `$__unixEpochTo()`                     | Will be replaced by the end of the selected timerange as a Unix Timestamp. i.e. `1641074399`                                                                                 |
+| `$__unixEpochNanoFrom()`               | Will be replaced by the start of the selected timerange as a nanosecond Timestamp. i.e. `1640988000506935834`                                                                |
+| `$__unixEpochNanoTo()`                 | Will be replaced by the end of the selected timerange as a nanosecond Timestamp. i.e. `1641074399589026839`                                                                  |    
+
 
 ## Write a query
 
@@ -113,10 +124,15 @@ Both the Visual Query Builder and the Code Editor support the transformation of 
 #### Single Value Time Series
 
 ```sparksql
-SELECT $__time(time_column), avg(value_column)
-FROM catalog.default.table_name 
-WHERE $__timeFilter(time_column) 
-GROUP BY $__timeWindow(time_column);
+SELECT
+   window.start,
+   avg(value_column)
+FROM
+   catalog.default.table_name
+WHERE
+   $__timeFilter(time_column)
+GROUP BY
+   $__timeWindow(time_column);
 ```
 #### Multiple Values Time Series
 
