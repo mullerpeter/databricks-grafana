@@ -159,23 +159,35 @@ func (d *Datasource) RefreshDBConnection() error {
 	return nil
 }
 
-func (d *Datasource) ExecuteQuery(queryString string) (*sql.Rows, error) {
-	rows, err := d.databricksDB.Query(queryString)
+// ExecContext is a helper function to execute a query on the Databricks SQL DB without returning any rows and handling session expiration
+func (d *Datasource) ExecContext(ctx context.Context, queryString string) error {
+	_, err := d.databricksDB.ExecContext(ctx, queryString)
+	if err != nil {
+		if strings.Contains(err.Error(), "Invalid SessionHandle") {
+			err = d.RefreshDBConnection()
+			if err != nil {
+				return err
+			}
+			return d.ExecContext(ctx, queryString)
+		}
+		return err
+	}
+	return nil
+}
+
+// QueryContext is a helper function to query the Databricks SQL DB returning the rows and handling session expiration
+func (d *Datasource) QueryContext(ctx context.Context, queryString string) (*sql.Rows, error) {
+	rows, err := d.databricksDB.QueryContext(ctx, queryString)
 	if err != nil {
 		if strings.Contains(err.Error(), "Invalid SessionHandle") {
 			err = d.RefreshDBConnection()
 			if err != nil {
 				return nil, err
 			}
-			rows, err = d.ExecuteQuery(queryString)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
+			return d.QueryContext(ctx, queryString)
 		}
+		return nil, err
 	}
-
 	return rows, nil
 }
 
@@ -187,7 +199,7 @@ type Datasource struct {
 }
 
 func (d *Datasource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
-	return autocompletionQueries(req, sender, d)
+	return autocompletionQueries(ctx, req, sender, d)
 }
 
 // Dispose here tells plugin SDK that plugin wants to clean up resources when a new instance
@@ -230,7 +242,7 @@ type queryModel struct {
 	QuerySettings querySettings `json:"querySettings"`
 }
 
-func (d *Datasource) query(_ context.Context, pCtx backend.PluginContext, query backend.DataQuery) backend.DataResponse {
+func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, query backend.DataQuery) backend.DataResponse {
 	response := backend.DataResponse{}
 
 	// Unmarshal the JSON into our queryModel.
@@ -260,7 +272,7 @@ func (d *Datasource) query(_ context.Context, pCtx backend.PluginContext, query 
 		if len(queries) > 1 {
 			// Execute all but the last statement without returning any data
 			for _, query := range queries[:len(queries)-1] {
-				_, err := d.ExecuteQuery(query)
+				err := d.ExecContext(ctx, query)
 				if err != nil {
 					response.Error = err
 					log.DefaultLogger.Info("Error", "err", err)
@@ -276,7 +288,7 @@ func (d *Datasource) query(_ context.Context, pCtx backend.PluginContext, query 
 
 	frame := data.NewFrame("response")
 
-	rows, err := d.ExecuteQuery(queryString)
+	rows, err := d.QueryContext(ctx, queryString)
 	if err != nil {
 		response.Error = err
 		log.DefaultLogger.Info("Error", "err", err)
@@ -332,10 +344,10 @@ func (d *Datasource) query(_ context.Context, pCtx backend.PluginContext, query 
 // The main use case for these health checks is the test button on the
 // datasource configuration page which allows users to verify that
 // a datasource is working as expected.
-func (d *Datasource) CheckHealth(_ context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
+func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
 	log.DefaultLogger.Info("CheckHealth called", "request", req)
 
-	rows, err := d.ExecuteQuery("SELECT 1")
+	rows, err := d.QueryContext(ctx, "SELECT 1")
 
 	if err != nil {
 		return &backend.CheckHealthResult{
