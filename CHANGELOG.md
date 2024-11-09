@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.3.0
+## 1.3.1
+
+- Bugfix: Multi statement SQL queries
+
+---
+
+### 1.3.0
 
 - ***Minimum Grafana version increased to 10.4.1***
 - Switch to @grafana/sql as query editor
