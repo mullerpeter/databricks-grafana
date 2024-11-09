@@ -65,16 +65,21 @@ You can either authenticate the plugin using a [Personal Access Token (PAT)](htt
 
 Available configuration fields are as follows:
 
-| Name                  | Description                                                                                                  |
-|-----------------------|--------------------------------------------------------------------------------------------------------------|
-| Server Hostname       | Databricks Server Hostname (without http). i.e. `XXX.cloud.databricks.com`                                   |
-| Server Port           | Databricks Server Port (default `443`)                                                                       |
-| HTTP Path             | HTTP Path value for the existing cluster or SQL warehouse. i.e. `sql/1.0/endpoints/XXX`                      |
-| Authentication Method | PAT (Personal Access Token), M2M (Machine to Machine) OAuth or OAuth2 Client Credentials Authentication      |
-| Client ID             | Databricks Service Principal Client ID. (only if OAuth / OAuth2 is chosen as Auth Method)                    |
-| Client Secret         | Databricks Service Principal Client Secret. (only if OAuth / OAuth2 is chosen as Auth Method)                |
-| Access Token          | Personal Access Token for Databricks. (only if PAT is chosen as Auth Method)                                 |
-| OAuth2 Token Endpoint | URL of OAuth2 endpoint (only if OAuth2 Client Credentials Authentication is chosen as Auth Method)           |
+| Name                   | Description                                                                                                                                                                  |
+|------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Server Hostname        | Databricks Server Hostname (without http). i.e. `XXX.cloud.databricks.com`                                                                                                   |
+| Server Port            | Databricks Server Port (default `443`)                                                                                                                                       |
+| HTTP Path              | HTTP Path value for the existing cluster or SQL warehouse. i.e. `sql/1.0/endpoints/XXX`                                                                                      |
+| Authentication Method  | PAT (Personal Access Token), M2M (Machine to Machine) OAuth or OAuth2 Client Credentials Authentication                                                                      |
+| Client ID              | Databricks Service Principal Client ID. (only if OAuth / OAuth2 is chosen as Auth Method)                                                                                    |
+| Client Secret          | Databricks Service Principal Client Secret. (only if OAuth / OAuth2 is chosen as Auth Method)                                                                                |
+| Access Token           | Personal Access Token for Databricks. (only if PAT is chosen as Auth Method)                                                                                                 |
+| OAuth2 Token Endpoint  | URL of OAuth2 endpoint (only if OAuth2 Client Credentials Authentication is chosen as Auth Method)                                                                           |
+| Min Interval (Default) | Min Interval default value for all queries. A lower limit for the interval. Recommended to be set to write frequency, for example `1m` if your data is written every minute. |
+| Max Open               | The maximum number of open connections to the database. (0 = unlimited)                                                                                                      |
+| Max Idle               | The maximum number of idle connections to the database. (0 = no idle connections are retained)                                                                               |
+| Max Idle Time          | The maximum amount of time in seconds a connection may be idle before being closed. If set to 0, connections can be idle forever.                                            |
+| Max Lifetime           | The maximum amount of time in seconds a connection may be reused. If set to 0, connections are reused forever.                                                               |
 
 ### Supported Macros
 

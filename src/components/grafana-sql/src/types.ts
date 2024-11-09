@@ -28,10 +28,11 @@ export interface SqlQueryForInterpolation {
 }
 
 export interface SQLConnectionLimits {
-  maxOpenConns: number;
-  maxIdleConns: number;
+  maxOpenConns: string;
+  maxIdleConns: string;
   maxIdleConnsAuto: boolean;
-  connMaxLifetime: number;
+  connMaxLifetime: string;
+  connMaxIdleTime: string;
 }
 
 export interface SQLOptions extends SQLConnectionLimits, DataSourceJsonData {

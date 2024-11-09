@@ -46,6 +46,20 @@ type DatasourceSettings struct {
 	ExternalCredentialsUrl string `json:"externalCredentialsUrl"`
 }
 
+type ConnectionSettingsRawJson struct {
+	MaxOpenConns    string `json:"maxOpenConns"`
+	MaxIdleConns    string `json:"maxIdleConns"`
+	ConnMaxLifetime string `json:"connMaxLifetime"`
+	ConnMaxIdleTime string `json:"connMaxIdleTime"`
+}
+
+type ConnectionSettings struct {
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime time.Duration
+	ConnMaxIdleTime time.Duration
+}
+
 // NewSampleDatasource creates a new datasource instance.
 func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
 	datasourceSettings := new(DatasourceSettings)
@@ -54,6 +68,8 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 		log.DefaultLogger.Info("Setting Parse Error", "err", err)
 		return nil, err
 	}
+
+	connectionSettings := parseConnectionSettings(settings.JSONData)
 	port := 443
 	if datasourceSettings.Port != "" {
 		portInt, err := strconv.Atoi(datasourceSettings.Port)
@@ -107,11 +123,12 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 				return nil, err
 			}
 
-			databricksDB.SetConnMaxIdleTime(6 * time.Hour)
+			SetDatasourceSettings(databricksDB, connectionSettings)
 			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 			return &Datasource{
-				connector:    connector,
-				databricksDB: databricksDB,
+				connector:          connector,
+				databricksDB:       databricksDB,
+				connectionSettings: connectionSettings,
 			}, nil
 		}
 	} else if datasourceSettings.AuthenticationMethod == "dsn" || datasourceSettings.AuthenticationMethod == "" {
@@ -134,16 +151,77 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 			return nil, err
 		}
 
-		databricksDB.SetConnMaxIdleTime(6 * time.Hour)
+		SetDatasourceSettings(databricksDB, connectionSettings)
 		log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 		return &Datasource{
-			connector:    connector,
-			databricksDB: databricksDB,
+			connector:          connector,
+			databricksDB:       databricksDB,
+			connectionSettings: connectionSettings,
 		}, nil
 
 	}
 
 	return nil, fmt.Errorf("Invalid Connection Method")
+}
+
+func parseConnectionSettings(settingsRawJson json.RawMessage) ConnectionSettings {
+	connectionSettings := ConnectionSettings{
+		MaxOpenConns:    0,
+		MaxIdleConns:    2,
+		ConnMaxLifetime: 6 * time.Hour,
+		ConnMaxIdleTime: 6 * time.Hour,
+	}
+
+	connectionSettingsJson := new(ConnectionSettingsRawJson)
+	err := json.Unmarshal(settingsRawJson, connectionSettingsJson)
+	if err != nil {
+		log.DefaultLogger.Info("ConnectionSettings Parse Error", "err", err)
+		return connectionSettings
+	}
+
+	if connectionSettingsJson.MaxOpenConns != "" {
+		maxOpenConn, err := strconv.Atoi(connectionSettingsJson.MaxOpenConns)
+		if err != nil {
+			log.DefaultLogger.Info("MaxOpenConns Parse Error", "err", err)
+		} else {
+			connectionSettings.MaxOpenConns = maxOpenConn
+		}
+	}
+
+	if connectionSettingsJson.MaxIdleConns != "" {
+		maxIdleConn, err := strconv.Atoi(connectionSettingsJson.MaxIdleConns)
+		if err != nil {
+			log.DefaultLogger.Info("MaxIdleConns Parse Error", "err", err)
+		} else {
+			connectionSettings.MaxIdleConns = maxIdleConn
+		}
+	}
+
+	if connectionSettingsJson.ConnMaxLifetime != "" {
+		connMaxLifetime, err := strconv.Atoi(connectionSettingsJson.ConnMaxLifetime)
+		if err != nil {
+			log.DefaultLogger.Info("ConnMaxLifetime Parse Error", "err", err)
+		} else {
+			connectionSettings.ConnMaxLifetime = time.Duration(connMaxLifetime) * time.Second
+		}
+	}
+
+	if connectionSettingsJson.ConnMaxIdleTime != "" {
+		connMaxIdleTime, err := strconv.Atoi(connectionSettingsJson.ConnMaxIdleTime)
+		if err != nil {
+			log.DefaultLogger.Info("ConnMaxIdleTime Parse Error", "err", err)
+		} else {
+			connectionSettings.ConnMaxIdleTime = time.Duration(connMaxIdleTime) * time.Second
+		}
+	}
+	return connectionSettings
+}
+
+func SetDatasourceSettings(db *sql.DB, connectionSettings ConnectionSettings) {
+	db.SetConnMaxIdleTime(connectionSettings.ConnMaxIdleTime)
+	db.SetConnMaxLifetime(connectionSettings.ConnMaxLifetime)
+	db.SetMaxIdleConns(connectionSettings.MaxIdleConns)
+	db.SetMaxOpenConns(connectionSettings.MaxOpenConns)
 }
 
 func (d *Datasource) RefreshDBConnection() error {
@@ -154,7 +232,7 @@ func (d *Datasource) RefreshDBConnection() error {
 		return err
 	}
 
-	d.databricksDB.SetConnMaxIdleTime(6 * time.Hour)
+	SetDatasourceSettings(d.databricksDB, d.connectionSettings)
 	log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 	return nil
 }
@@ -194,8 +272,9 @@ func (d *Datasource) QueryContext(ctx context.Context, queryString string) (*sql
 // Datasource is an example datasource which can respond to data queries, reports
 // its health and has streaming skills.
 type Datasource struct {
-	connector    driver.Connector
-	databricksDB *sql.DB
+	connector          driver.Connector
+	databricksDB       *sql.DB
+	connectionSettings ConnectionSettings
 }
 
 func (d *Datasource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
