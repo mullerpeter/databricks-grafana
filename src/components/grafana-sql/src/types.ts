@@ -44,6 +44,8 @@ export interface SQLOptions extends SQLConnectionLimits, DataSourceJsonData {
   database: string;
   url: string;
   timeInterval: string;
+  defaultQueryFormat: QueryFormat;
+  defaultEditorMode: EditorMode;
 }
 
 export enum QueryFormat {

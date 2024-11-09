@@ -1,41 +1,41 @@
-import { lastValueFrom, Observable, throwError } from 'rxjs';
-import { map } from 'rxjs/operators';
+import {lastValueFrom, Observable, throwError} from 'rxjs';
+import {map} from 'rxjs/operators';
 
 import {
-  getDefaultTimeRange,
+  CoreApp,
   DataFrame,
   DataFrameView,
   DataQuery,
   DataQueryRequest,
   DataQueryResponse,
   DataSourceInstanceSettings,
-  MetricFindValue,
-  ScopedVars,
-  CoreApp,
+  getDefaultTimeRange,
   getSearchFilterScopedVar,
   LegacyMetricFindQueryOptions,
-  VariableWithMultiSupport,
+  MetricFindValue,
+  ScopedVars,
   TimeRange,
+  VariableWithMultiSupport,
 } from '@grafana/data';
-import { EditorMode } from '@grafana/experimental';
+import {EditorMode} from '@grafana/experimental';
 import {
   BackendDataSourceResponse,
   DataSourceWithBackend,
   FetchResponse,
   getBackendSrv,
   getTemplateSrv,
-  toDataQueryResponse,
-  TemplateSrv,
   reportInteraction,
+  TemplateSrv,
+  toDataQueryResponse,
 } from '@grafana/runtime';
 
-import { ResponseParser } from '../ResponseParser';
-import { SqlQueryEditor } from '../components/QueryEditor';
-import { MACRO_NAMES } from '../constants';
-import { DB, SQLQuery, SQLOptions, SqlQueryModel, QueryFormat } from '../types';
+import {ResponseParser} from '../ResponseParser';
+import {SqlQueryEditor} from '../components/QueryEditor';
+import {MACRO_NAMES} from '../constants';
+import {DB, QueryFormat, SQLOptions, SQLQuery, SqlQueryModel} from '../types';
 import migrateAnnotation from '../utils/migration';
 
-import { isSqlDatasourceDatabaseSelectionFeatureFlagEnabled } from './../components/QueryEditorFeatureFlag.utils';
+import {isSqlDatasourceDatabaseSelectionFeatureFlagEnabled} from './../components/QueryEditorFeatureFlag.utils';
 
 type Schema = {
     name: string;
@@ -65,6 +65,8 @@ export abstract class SqlDatasource extends DataSourceWithBackend<SQLQuery, SQLO
   fetchedCatalogsSchemas: CatalogsSchemas;
   unityCatalogEnabled: boolean;
   initialized: boolean;
+  defaultQueryFormat: QueryFormat;
+  defaultEditorMode: EditorMode;
 
   constructor(
     instanceSettings: DataSourceInstanceSettings<SQLOptions>,
@@ -82,6 +84,8 @@ export abstract class SqlDatasource extends DataSourceWithBackend<SQLQuery, SQLO
     this.fetchedCatalogsSchemas = { catalogs: {} };
     this.unityCatalogEnabled = false;
     this.initialized = false;
+    this.defaultQueryFormat = settingsData.defaultQueryFormat;
+    this.defaultEditorMode = settingsData.defaultEditorMode;
     /*
       The `settingsData.database` will be defined if a default database has been defined in either
       1) the ConfigurationEditor.tsx, OR 2) the provisioning config file, either under `jsondata.database`, or simply `database`.

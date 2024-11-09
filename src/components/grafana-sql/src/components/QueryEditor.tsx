@@ -29,7 +29,7 @@ export function SqlQueryEditor({
     const [isQueryRunnable, setIsQueryRunnable] = useState(true);
     const db = datasource.getDB();
 
-    let {defaultSchema, defaultCatalog, unityCatalogEnabled} = datasource;
+    let {defaultSchema, defaultCatalog, unityCatalogEnabled, defaultQueryFormat, defaultEditorMode} = datasource;
     const dialect = queryHeaderProps?.dialect ?? 'other';
     const {loading, error} = useAsync(async () => {
         return () => {
@@ -39,7 +39,7 @@ export function SqlQueryEditor({
         };
     }, [datasource]);
 
-    const queryWithDefaults = applyQueryDefaults(query);
+    const queryWithDefaults = applyQueryDefaults({...query, format: query.format || defaultQueryFormat, editorMode: query.editorMode || defaultEditorMode});
     const [queryRowFilter, setQueryRowFilter] = useState<QueryRowFilter>({
         filter: !!queryWithDefaults.sql?.whereString,
         group: !!queryWithDefaults.sql?.groupBy?.[0]?.property.name,
