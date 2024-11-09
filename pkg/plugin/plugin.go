@@ -44,10 +44,13 @@ type DatasourceSettings struct {
 	AuthenticationMethod   string `json:"authenticationMethod"`
 	ClientId               string `json:"clientId"`
 	ExternalCredentialsUrl string `json:"externalCredentialsUrl"`
-	MaxOpenConns           string `json:"maxOpenConns"`
-	MaxIdleConns           string `json:"maxIdleConns"`
-	ConnMaxLifetime        string `json:"connMaxLifetime"`
-	ConnMaxIdleTime        string `json:"connMaxIdleTime"`
+}
+
+type ConnectionSettingsRawJson struct {
+	MaxOpenConns    string `json:"maxOpenConns"`
+	MaxIdleConns    string `json:"maxIdleConns"`
+	ConnMaxLifetime string `json:"connMaxLifetime"`
+	ConnMaxIdleTime string `json:"connMaxIdleTime"`
 }
 
 type ConnectionSettings struct {
@@ -66,7 +69,7 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 		return nil, err
 	}
 
-	connectionSettings := parseConnectionSettings(datasourceSettings)
+	connectionSettings := parseConnectionSettings(settings.JSONData)
 	port := 443
 	if datasourceSettings.Port != "" {
 		portInt, err := strconv.Atoi(datasourceSettings.Port)
@@ -161,7 +164,7 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 	return nil, fmt.Errorf("Invalid Connection Method")
 }
 
-func parseConnectionSettings(datasourceSettings *DatasourceSettings) ConnectionSettings {
+func parseConnectionSettings(settingsRawJson json.RawMessage) ConnectionSettings {
 	connectionSettings := ConnectionSettings{
 		MaxOpenConns:    0,
 		MaxIdleConns:    2,
@@ -169,8 +172,15 @@ func parseConnectionSettings(datasourceSettings *DatasourceSettings) ConnectionS
 		ConnMaxIdleTime: 6 * time.Hour,
 	}
 
-	if datasourceSettings.MaxOpenConns != "" {
-		maxOpenConn, err := strconv.Atoi(datasourceSettings.MaxOpenConns)
+	connectionSettingsJson := new(ConnectionSettingsRawJson)
+	err := json.Unmarshal(settingsRawJson, connectionSettingsJson)
+	if err != nil {
+		log.DefaultLogger.Info("ConnectionSettings Parse Error", "err", err)
+		return connectionSettings
+	}
+
+	if connectionSettingsJson.MaxOpenConns != "" {
+		maxOpenConn, err := strconv.Atoi(connectionSettingsJson.MaxOpenConns)
 		if err != nil {
 			log.DefaultLogger.Info("MaxOpenConns Parse Error", "err", err)
 		} else {
@@ -178,8 +188,8 @@ func parseConnectionSettings(datasourceSettings *DatasourceSettings) ConnectionS
 		}
 	}
 
-	if datasourceSettings.MaxIdleConns != "" {
-		maxIdleConn, err := strconv.Atoi(datasourceSettings.MaxIdleConns)
+	if connectionSettingsJson.MaxIdleConns != "" {
+		maxIdleConn, err := strconv.Atoi(connectionSettingsJson.MaxIdleConns)
 		if err != nil {
 			log.DefaultLogger.Info("MaxIdleConns Parse Error", "err", err)
 		} else {
@@ -187,8 +197,8 @@ func parseConnectionSettings(datasourceSettings *DatasourceSettings) ConnectionS
 		}
 	}
 
-	if datasourceSettings.ConnMaxLifetime != "" {
-		connMaxLifetime, err := strconv.Atoi(datasourceSettings.ConnMaxLifetime)
+	if connectionSettingsJson.ConnMaxLifetime != "" {
+		connMaxLifetime, err := strconv.Atoi(connectionSettingsJson.ConnMaxLifetime)
 		if err != nil {
 			log.DefaultLogger.Info("ConnMaxLifetime Parse Error", "err", err)
 		} else {
@@ -196,8 +206,8 @@ func parseConnectionSettings(datasourceSettings *DatasourceSettings) ConnectionS
 		}
 	}
 
-	if datasourceSettings.ConnMaxIdleTime != "" {
-		connMaxIdleTime, err := strconv.Atoi(datasourceSettings.ConnMaxIdleTime)
+	if connectionSettingsJson.ConnMaxIdleTime != "" {
+		connMaxIdleTime, err := strconv.Atoi(connectionSettingsJson.ConnMaxIdleTime)
 		if err != nil {
 			log.DefaultLogger.Info("ConnMaxIdleTime Parse Error", "err", err)
 		} else {
