@@ -224,10 +224,10 @@ export class ConfigEditor extends PureComponent<Props, State> {
                     </InlineField>
                     <h4 style={{margin: "1em 0 0.6em 0"}}>Connection Settings</h4>
                     <InlineField label="Timeout" labelWidth={30}
-                                 tooltip="The query timeout in seconds">
+                                 tooltip="Adds timeout for the server query execution. Default is no timeout (0).">
                         <Input
                             value={jsonData.timeout || ''}
-                            placeholder="60"
+                            placeholder="0"
                             width={40}
                             onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'timeout')}
                         />
@@ -236,7 +236,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
                                  tooltip="The maximum number of retries for queries.">
                         <Input
                             value={jsonData.retries || ''}
-                            placeholder="0"
+                            placeholder="4"
                             width={40}
                             onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'retries')}
                         />
@@ -245,7 +245,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
                                  tooltip="The backoff duration between retries in seconds.">
                         <Input
                             value={jsonData.retryBackoff || ''}
-                            placeholder="0"
+                            placeholder="1"
                             width={40}
                             onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'retryBackoff')}
                         />
@@ -254,7 +254,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
                                  tooltip="The retry timeout in seconds">
                         <Input
                             value={jsonData.maxRetryDuration || ''}
-                            placeholder="60"
+                            placeholder="30"
                             width={40}
                             onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'maxRetryDuration')}
                         />

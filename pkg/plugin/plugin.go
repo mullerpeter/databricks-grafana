@@ -186,10 +186,10 @@ func parseConnectionSettings(settingsRawJson json.RawMessage) ConnectionSettings
 		MaxIdleConns:     2,
 		ConnMaxLifetime:  6 * time.Hour,
 		ConnMaxIdleTime:  6 * time.Hour,
-		Retries:          0,
-		RetryBackoff:     0 * time.Second,
-		MaxRetryDuration: 60 * time.Second,
-		Timeout:          60 * time.Second,
+		Retries:          4,
+		RetryBackoff:     1 * time.Second,
+		MaxRetryDuration: 30 * time.Second,
+		Timeout:          0 * time.Second,
 		MaxRows:          10000,
 	}
 

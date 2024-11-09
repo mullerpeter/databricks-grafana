@@ -80,11 +80,11 @@ Available configuration fields are as follows:
 | Max Idle               | The maximum number of idle connections to the database. (0 = no idle connections are retained)                                                                               |
 | Max Idle Time          | The maximum amount of time in seconds a connection may be idle before being closed. If set to 0, connections can be idle forever.                                            |
 | Max Lifetime           | The maximum amount of time in seconds a connection may be reused. If set to 0, connections are reused forever.                                                               |
-| Retries                | The number of retries to perform.                                                                                                                                            |
-| Retry Backoff          | The time in seconds to wait between retries.                                                                                                                                 |
-| Max Retry Duration     | The maximum time in seconds to retry a query.                                                                                                                                |
-| Timeout                | The query timeout in seconds.                                                                                                                                                |
-| Max Rows               | The maximum number of rows to return in a query.                                                                                                                             |
+| Retries                | The number of retries to perform. (Default 4)                                                                                                                                |
+| Retry Backoff          | The time in seconds to wait between retries. (Default 1)                                                                                                                     |
+| Max Retry Duration     | The maximum time in seconds to retry a query. (Default 30)                                                                                                                   |
+| Timeout                | Adds timeout for the server query execution. Default is no timeout (0).                                                                                                      |
+| Max Rows               | The maximum number of rows to return in a query. (Default 10'000)                                                                                                            |
 | Default Query Format   | The default format for new queries. (Table or Timer series)                                                                                                                  |
 | Default Editor Mode    | The default editor mode for new queries. (Code or Builder)                                                                                                                   |
 
@@ -102,7 +102,7 @@ datasources:
       hostname: XXX.cloud.databricks.com
       httpPath: sql/1.0/endpoints/XXX
       port: 443
-      authenticationMethod: dsn | m2m | oauth2_client_credentials
+      authenticationMethod: dsn (=PAT) | m2m | oauth2_client_credentials
       clientId: ...
       externalCredentialsUrl: ...
       timeInterval: 1m
