@@ -1,6 +1,13 @@
 # Changelog
 
-## 1.3.1
+## 1.3.2
+
+- Feature: Add additional connection config options
+- Chore: Upgrade go & npm dependencies
+
+---
+
+### 1.3.1
 
 - Bugfix: Multi statement SQL queries
 
