@@ -137,7 +137,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
             ...options,
             jsonData: {
                 ...options.jsonData,
-                maxOpenConns: Number(event.target.value),
+                maxOpenConns: event.target.value,
             },
         });
     };
@@ -148,7 +148,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
             ...options,
             jsonData: {
                 ...options.jsonData,
-                maxIdleConns: Number(event.target.value),
+                maxIdleConns: event.target.value,
             },
         });
     };
@@ -159,7 +159,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
             ...options,
             jsonData: {
                 ...options.jsonData,
-                connMaxIdleTime: Number(event.target.value),
+                connMaxIdleTime: event.target.value,
             },
         });
     };
@@ -170,7 +170,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
             ...options,
             jsonData: {
                 ...options.jsonData,
-                connMaxLifetime: Number(event.target.value),
+                connMaxLifetime: event.target.value,
             },
         });
     };
@@ -310,7 +310,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
                     <InlineField label="Max Open" labelWidth={30}
                                  tooltip="The maximum number of open connections to the database. (0 = unlimited)">
                         <Input
-                            value={jsonData.maxOpenConns || '0'}
+                            value={jsonData.maxOpenConns || ''}
                             placeholder="0"
                             width={40}
                             onChange={this.onMaxOpenConnsChange}
@@ -319,7 +319,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
                     <InlineField label="Max Idle" labelWidth={30}
                                  tooltip="The maximum number of idle connections to the database. (0 = no idle connections are retained)">
                         <Input
-                            value={jsonData.maxIdleConns || '2'}
+                            value={jsonData.maxIdleConns || ''}
                             placeholder="2"
                             width={40}
                             onChange={this.onMaxIdleConnsChange}
@@ -328,7 +328,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
                     <InlineField label="Max Idle Time" labelWidth={30}
                                  tooltip="The maximum amount of time in seconds a connection may be idle before being closed. If set to 0, connections can be idle forever.">
                         <Input
-                            value={jsonData.connMaxIdleTime || '21600'}
+                            value={jsonData.connMaxIdleTime || ''}
                             placeholder="21600"
                             width={40}
                             onChange={this.onMaxIdleTimeChange}
@@ -337,7 +337,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
                     <InlineField label="Max Lifetime" labelWidth={30}
                                  tooltip="The maximum amount of time in seconds a connection may be reused. If set to 0, connections are reused forever.">
                         <Input
-                            value={jsonData.connMaxLifetime || '21600'}
+                            value={jsonData.connMaxLifetime || ''}
                             placeholder="21600"
                             width={40}
                             onChange={this.onMaxLifetimeChange}
