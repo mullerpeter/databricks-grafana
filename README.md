@@ -80,7 +80,47 @@ Available configuration fields are as follows:
 | Max Idle               | The maximum number of idle connections to the database. (0 = no idle connections are retained)                                                                               |
 | Max Idle Time          | The maximum amount of time in seconds a connection may be idle before being closed. If set to 0, connections can be idle forever.                                            |
 | Max Lifetime           | The maximum amount of time in seconds a connection may be reused. If set to 0, connections are reused forever.                                                               |
+| Retries                | The number of retries to perform.                                                                                                                                            |
+| Retry Backoff          | The time in seconds to wait between retries.                                                                                                                                 |
+| Max Retry Duration     | The maximum time in seconds to retry a query.                                                                                                                                |
+| Timeout                | The query timeout in seconds.                                                                                                                                                |
+| Max Rows               | The maximum number of rows to return in a query.                                                                                                                             |
+| Default Query Format   | The default format for new queries. (Table or Timer series)                                                                                                                  |
+| Default Editor Mode    | The default editor mode for new queries. (Code or Builder)                                                                                                                   |
 
+
+##### Configuration via YAML
+
+The Datasource configuration can also be done via a YAML file as described [here](https://grafana.com/docs/grafana/latest/administration/provisioning/). The configuration parameters are the same as described above and named as follows:
+
+```yaml
+datasources:
+  - name: Databricks
+    type: mullerpeter-databricks-datasource
+    isDefault: true
+    jsonData:
+      hostname: XXX.cloud.databricks.com
+      httpPath: sql/1.0/endpoints/XXX
+      port: 443
+      authenticationMethod: dsn | m2m | oauth2_client_credentials
+      clientId: ...
+      externalCredentialsUrl: ...
+      timeInterval: 1m
+      maxOpenConns: 0
+      maxIdleConns: 0
+      connMaxLifetime: 3600
+      connMaxIdleTime: 3600
+      retries: 3
+      retryBackoff: 1
+      maxRetryDuration: 60
+      timeout: 60
+      maxRows: 10000
+      defaultQueryFormat: table | time_series
+      defaultEditorMode: builder | code
+    secureJsonData:
+      clientSecret: ...
+      token: ...
+```
 ### Supported Macros
 
 All variables used in the SQL query get replaced by their respective values. See Grafana documentation for [Global Variables](https://grafana.com/docs/grafana/v9.3/dashboards/variables/add-template-variables/#global-variables).
