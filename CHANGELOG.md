@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.3.2
+## 1.3.3
+
+- Feature: Add additional connection & query editor config options
+
+---
+
+### 1.3.2
 
 - Feature: Add additional connection config options
 - Chore: Upgrade go & npm dependencies

@@ -47,17 +47,27 @@ type DatasourceSettings struct {
 }
 
 type ConnectionSettingsRawJson struct {
-	MaxOpenConns    string `json:"maxOpenConns"`
-	MaxIdleConns    string `json:"maxIdleConns"`
-	ConnMaxLifetime string `json:"connMaxLifetime"`
-	ConnMaxIdleTime string `json:"connMaxIdleTime"`
+	MaxOpenConns     string `json:"maxOpenConns"`
+	MaxIdleConns     string `json:"maxIdleConns"`
+	ConnMaxLifetime  string `json:"connMaxLifetime"`
+	ConnMaxIdleTime  string `json:"connMaxIdleTime"`
+	Retries          string `json:"retries"`
+	RetryBackoff     string `json:"retryBackoff"`
+	MaxRetryDuration string `json:"maxRetryDuration"`
+	Timeout          string `json:"timeout"`
+	MaxRows          string `json:"maxRows"`
 }
 
 type ConnectionSettings struct {
-	MaxOpenConns    int
-	MaxIdleConns    int
-	ConnMaxLifetime time.Duration
-	ConnMaxIdleTime time.Duration
+	MaxOpenConns     int
+	MaxIdleConns     int
+	ConnMaxLifetime  time.Duration
+	ConnMaxIdleTime  time.Duration
+	Retries          int
+	RetryBackoff     time.Duration
+	MaxRetryDuration time.Duration
+	Timeout          time.Duration
+	MaxRows          int
 }
 
 // NewSampleDatasource creates a new datasource instance.
@@ -110,6 +120,9 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 			dbsql.WithHTTPPath(datasourceSettings.Path),
 			dbsql.WithPort(port),
 			dbsql.WithAuthenticator(authenticator),
+			dbsql.WithTimeout(connectionSettings.Timeout),
+			dbsql.WithMaxRows(connectionSettings.MaxRows),
+			dbsql.WithRetries(connectionSettings.Retries, connectionSettings.RetryBackoff, connectionSettings.MaxRetryDuration),
 		)
 		if err != nil {
 			log.DefaultLogger.Info("Connector Error", "err", err)
@@ -138,6 +151,9 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 			dbsql.WithServerHostname(datasourceSettings.Hostname),
 			dbsql.WithPort(port),
 			dbsql.WithHTTPPath(datasourceSettings.Path),
+			dbsql.WithTimeout(connectionSettings.Timeout),
+			dbsql.WithMaxRows(connectionSettings.MaxRows),
+			dbsql.WithRetries(connectionSettings.Retries, connectionSettings.RetryBackoff, connectionSettings.MaxRetryDuration),
 		)
 		if err != nil {
 			log.DefaultLogger.Info("Connector Error", "err", err)
@@ -166,10 +182,15 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 
 func parseConnectionSettings(settingsRawJson json.RawMessage) ConnectionSettings {
 	connectionSettings := ConnectionSettings{
-		MaxOpenConns:    0,
-		MaxIdleConns:    2,
-		ConnMaxLifetime: 6 * time.Hour,
-		ConnMaxIdleTime: 6 * time.Hour,
+		MaxOpenConns:     0,
+		MaxIdleConns:     2,
+		ConnMaxLifetime:  6 * time.Hour,
+		ConnMaxIdleTime:  6 * time.Hour,
+		Retries:          4,
+		RetryBackoff:     1 * time.Second,
+		MaxRetryDuration: 30 * time.Second,
+		Timeout:          0 * time.Second,
+		MaxRows:          10000,
 	}
 
 	connectionSettingsJson := new(ConnectionSettingsRawJson)
