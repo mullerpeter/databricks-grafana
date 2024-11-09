@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -25,7 +26,7 @@ type defaultsResponseBody struct {
 	DefaultSchema  string `json:"defaultSchema"`
 }
 
-func autocompletionQueries(req *backend.CallResourceRequest, sender backend.CallResourceResponseSender, d *Datasource) error {
+func autocompletionQueries(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender, d *Datasource) error {
 	path := req.Path
 	log.DefaultLogger.Info("CallResource called", "path", path)
 	var body schemaRequestBody
@@ -36,7 +37,7 @@ func autocompletionQueries(req *backend.CallResourceRequest, sender backend.Call
 	}
 	switch path {
 	case "catalogs":
-		rows, err := d.ExecuteQuery("SHOW CATALOGS")
+		rows, err := d.QueryContext(ctx, "SHOW CATALOGS")
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
@@ -74,7 +75,7 @@ func autocompletionQueries(req *backend.CallResourceRequest, sender backend.Call
 			queryString = fmt.Sprintf("SHOW SCHEMAS IN %s", body.Catalog)
 		}
 		log.DefaultLogger.Info("CallResource called", "queryString", queryString)
-		rows, err := d.ExecuteQuery(queryString)
+		rows, err := d.QueryContext(ctx, queryString)
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
@@ -114,7 +115,7 @@ func autocompletionQueries(req *backend.CallResourceRequest, sender backend.Call
 			}
 		}
 		log.DefaultLogger.Info("CallResource called", "queryString", queryString)
-		rows, err := d.ExecuteQuery(queryString)
+		rows, err := d.QueryContext(ctx, queryString)
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
@@ -150,7 +151,7 @@ func autocompletionQueries(req *backend.CallResourceRequest, sender backend.Call
 	case "columns":
 		queryString := fmt.Sprintf("DESCRIBE TABLE %s", body.Table)
 		log.DefaultLogger.Info("CallResource called", "queryString", queryString)
-		rows, err := d.ExecuteQuery(queryString)
+		rows, err := d.QueryContext(ctx, queryString)
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
@@ -190,7 +191,7 @@ func autocompletionQueries(req *backend.CallResourceRequest, sender backend.Call
 	case "defaults":
 		queryString := "SELECT current_catalog(), current_schema();"
 		log.DefaultLogger.Info("CallResource called", "queryString", queryString)
-		rows, err := d.ExecuteQuery(queryString)
+		rows, err := d.QueryContext(ctx, queryString)
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
