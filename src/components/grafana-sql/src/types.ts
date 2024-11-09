@@ -32,6 +32,7 @@ export interface SQLConnectionLimits {
   maxIdleConns: number;
   maxIdleConnsAuto: boolean;
   connMaxLifetime: number;
+  connMaxIdleTime: number;
 }
 
 export interface SQLOptions extends SQLConnectionLimits, DataSourceJsonData {
