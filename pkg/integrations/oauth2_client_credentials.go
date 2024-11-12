@@ -15,6 +15,7 @@ type oauth2ClientCredentials struct {
 	clientID     string
 	clientSecret string
 	tokenUrl     string
+	scopes       []string
 	tokenSource  oauth2.TokenSource
 	mx           sync.Mutex
 }
@@ -35,6 +36,7 @@ func (c *oauth2ClientCredentials) Authenticate(r *http.Request) error {
 		ClientID:     c.clientID,
 		ClientSecret: c.clientSecret,
 		TokenURL:     c.tokenUrl,
+		Scopes:       c.scopes,
 	}
 
 	// Create context with 1m timeout to cancel token fetching
@@ -60,11 +62,12 @@ func (c *oauth2ClientCredentials) Authenticate(r *http.Request) error {
 
 }
 
-func NewOauth2ClientCredentials(clientID, clientSecret, tokenUrl string) auth.Authenticator {
+func NewOauth2ClientCredentials(clientID, clientSecret, tokenUrl string, scopes []string) auth.Authenticator {
 	return &oauth2ClientCredentials{
 		clientID:     clientID,
 		clientSecret: clientSecret,
 		tokenUrl:     tokenUrl,
+		scopes:       scopes,
 		tokenSource:  nil,
 		mx:           sync.Mutex{},
 	}

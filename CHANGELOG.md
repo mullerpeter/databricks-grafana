@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.3.3
+## 1.3.4
+
+- Feature: Add OAuth Scopes Configuration
+
+---
+
+### 1.3.3
 
 - Feature: Add additional connection & query editor config options
 

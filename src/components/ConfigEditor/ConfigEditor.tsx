@@ -124,14 +124,24 @@ export class ConfigEditor extends PureComponent<Props, State> {
                         />
                     </InlineField>
                     {jsonData.authenticationMethod === 'oauth2_client_credentials' && (
-                        <InlineField label="OAuth2 Token Endpoint" labelWidth={30} tooltip="HTTP URL to token endpoint">
-                            <Input
-                                value={jsonData.externalCredentialsUrl || ''}
-                                placeholder="http://localhost:2020"
-                                width={40}
-                                onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'externalCredentialsUrl')}
-                            />
-                        </InlineField>
+                        <>
+                            <InlineField label="OAuth2 Token Endpoint" labelWidth={30} tooltip="HTTP URL to token endpoint">
+                                <Input
+                                    value={jsonData.externalCredentialsUrl || ''}
+                                    placeholder="http://localhost:2020"
+                                    width={40}
+                                    onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'externalCredentialsUrl')}
+                                />
+                            </InlineField>
+                            <InlineField label="OAuth2 Scopes" labelWidth={30} tooltip="Comma separated list of scopes (optional)">
+                                <Input
+                                    value={jsonData.oauthScopes || ''}
+                                    width={40}
+                                    placeholder="api,read"
+                                    onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'oauthScopes')}
+                                />
+                            </InlineField>
+                        </>
                     )}
                     {(jsonData.authenticationMethod === 'm2m' || jsonData.authenticationMethod === 'oauth2_client_credentials') ? (
                         <>
