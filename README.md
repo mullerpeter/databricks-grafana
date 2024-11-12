@@ -75,6 +75,7 @@ Available configuration fields are as follows:
 | Client Secret          | Databricks Service Principal Client Secret. (only if OAuth / OAuth2 is chosen as Auth Method)                                                                                |
 | Access Token           | Personal Access Token for Databricks. (only if PAT is chosen as Auth Method)                                                                                                 |
 | OAuth2 Token Endpoint  | URL of OAuth2 endpoint (only if OAuth2 Client Credentials Authentication is chosen as Auth Method)                                                                           |
+| OAuth2 Scopes          | Comma separated list of OAuth2 scopes. (only if OAuth2 Client Credentials Authentication is chosen as Auth Method)                                                           |
 | Min Interval (Default) | Min Interval default value for all queries. A lower limit for the interval. Recommended to be set to write frequency, for example `1m` if your data is written every minute. |
 | Max Open               | The maximum number of open connections to the database. (0 = unlimited)                                                                                                      |
 | Max Idle               | The maximum number of idle connections to the database. (0 = no idle connections are retained)                                                                               |
@@ -105,6 +106,7 @@ datasources:
       authenticationMethod: dsn (=PAT) | m2m | oauth2_client_credentials
       clientId: ...
       externalCredentialsUrl: ...
+      oauthScopes: api,read
       timeInterval: 1m
       maxOpenConns: 0
       maxIdleConns: 0

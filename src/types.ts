@@ -10,6 +10,7 @@ export interface DatabricksDataSourceOptions extends SQLOptions {
   authenticationMethod?: string;
   clientId?: string;
   externalCredentialsUrl?: string;
+  oauthScopes?: string;
   retries?: string;
   retryBackoff?: string;
   maxRetryDuration?: string;

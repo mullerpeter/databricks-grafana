@@ -44,6 +44,7 @@ type DatasourceSettings struct {
 	AuthenticationMethod   string `json:"authenticationMethod"`
 	ClientId               string `json:"clientId"`
 	ExternalCredentialsUrl string `json:"externalCredentialsUrl"`
+	OAuthScopes            string `json:"oauthScopes"`
 }
 
 type ConnectionSettingsRawJson struct {
@@ -102,6 +103,7 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 				datasourceSettings.ClientId,
 				settings.DecryptedSecureJSONData["clientSecret"],
 				datasourceSettings.ExternalCredentialsUrl,
+				strings.Split(datasourceSettings.OAuthScopes, ","),
 			)
 		} else if datasourceSettings.AuthenticationMethod == "m2m" {
 			authenticator = m2m.NewAuthenticatorWithScopes(
