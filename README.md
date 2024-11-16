@@ -59,7 +59,7 @@ grafana/grafana
 
 To configure the plugin use the values provided under JDBC/ODBC in the advanced options of the Databricks Cluster (or SQL Warehouse) and the the Credentials according to the chosen Authentication Method.
 
-You can either authenticate the plugin using a [Personal Access Token (PAT)](https://docs.databricks.com/en/dev-tools/auth/pat.html), via [Databricks M2M OAuth](https://docs.databricks.com/en/dev-tools/auth/oauth-m2m.html) using a Service Principal Client ID and Client Secret or by using an external OAuth Client Credential Endpoint which returns a Databricks token (the OAuth endpoint should implement the default [OAuth Client Credential Grant](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4))
+You can either authenticate the plugin using a [Personal Access Token (PAT)](https://docs.databricks.com/en/dev-tools/auth/pat.html), via [Databricks M2M OAuth](https://docs.databricks.com/en/dev-tools/auth/oauth-m2m.html) using a Service Principal Client ID and Client Secret or by using an external OAuth Client Credential Endpoint which returns a Databricks token (the OAuth endpoint should implement the default [OAuth Client Credential Grant](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4)) i.e. Azure Entra (OAuth2 Endpoint `https://login.microsoftonline.com/{tenant-id}/oauth2/v2.0/token` & Scope `2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default`).
 
 ![img_1.png](img/config_editor.png)
 
