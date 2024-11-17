@@ -4,13 +4,10 @@
 [![Github All Releases](https://img.shields.io/github/downloads/mullerpeter/databricks-grafana/total.svg)]()
 ![Release workflow](https://github.com/mullerpeter/databricks-grafana/actions/workflows/release.yml/badge.svg)
 
+
 Grafana Databricks integration allowing direct connection to Databricks to query and visualize Databricks data in Grafana.
 
 ![img.png](img/full_text_sql_editor.png)
-
-## Documentation
-
-Read the full [Grafana Data Source Backend Plugin Documentation](https://mullerpeter.github.io/databricks-grafana) for more information.
 
 ## Get started with the plugin
 
@@ -40,11 +37,14 @@ unzip mullerpeter-databricks-datasource.zip
 2. Edit the grafana configuration file to allow unsigned plugins:
 * Linux：/etc/grafana/grafana.ini
 * macOS：/usr/local/etc/grafana/grafana.ini
+
 ```ini
 [plugins]
 allow_loading_unsigned_plugins = mullerpeter-databricks-datasource
 ```
+
 Or with docker
+
 ```bash
 docker run -d \
 -p 3000:3000 \
