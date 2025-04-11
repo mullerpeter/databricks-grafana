@@ -16,6 +16,7 @@ export interface DatabricksDataSourceOptions extends SQLOptions {
   maxRetryDuration?: string;
   timeout?: string;
   maxRows?: string;
+  oauthPassThru?: boolean;
 }
 
 /**
