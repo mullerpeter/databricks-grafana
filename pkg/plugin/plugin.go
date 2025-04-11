@@ -9,6 +9,7 @@ import (
 	dbsql "github.com/databricks/databricks-sql-go"
 	"github.com/databricks/databricks-sql-go/auth"
 	"github.com/databricks/databricks-sql-go/auth/oauth/m2m"
+	"github.com/grafana/grafana-azure-sdk-go/azsettings"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
@@ -68,10 +69,11 @@ type ConnectionSettings struct {
 	MaxRetryDuration time.Duration
 	Timeout          time.Duration
 	MaxRows          int
+	idToken          string
 }
 
 // NewSampleDatasource creates a new datasource instance.
-func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
+func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
 	datasourceSettings := new(DatasourceSettings)
 	err := json.Unmarshal(settings.JSONData, datasourceSettings)
 	if err != nil {
@@ -90,7 +92,7 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 		port = portInt
 	}
 
-	if datasourceSettings.AuthenticationMethod == "m2m" || datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" {
+	if datasourceSettings.AuthenticationMethod == "m2m" || datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" || datasourceSettings.AuthenticationMethod == "azure_ad_forward" {
 		var authenticator auth.Authenticator
 
 		if datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" {
@@ -111,6 +113,15 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 				datasourceSettings.Hostname,
 				[]string{},
 			)
+		} else if datasourceSettings.AuthenticationMethod == "azure_ad_forward" {
+			azureSettings, err := azsettings.ReadSettings(ctx)
+			if err != nil {
+				log.DefaultLogger.Info("Failed to get Azure Setting", "err", err)
+				return nil, err
+			}
+			authenticator = integrations.NewAzureADCredentials(
+				azureSettings,
+			)
 		} else {
 			log.DefaultLogger.Info("Authentication Method Parse Error", "err", nil)
 			return nil, fmt.Errorf("authentication Method Parse Error")
@@ -130,18 +141,11 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 			return nil, err
 		} else {
 			log.DefaultLogger.Info("Init Databricks SQL DB")
-			databricksDB := sql.OpenDB(connector)
 
-			if err := databricksDB.Ping(); err != nil {
-				log.DefaultLogger.Info("Ping Error (Could not ping Databricks)", "err", err)
-				return nil, err
-			}
-
-			SetDatasourceSettings(databricksDB, connectionSettings)
 			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 			return &Datasource{
 				connector:          connector,
-				databricksDB:       databricksDB,
+				databricksDB:       nil,
 				connectionSettings: connectionSettings,
 			}, nil
 		}
@@ -424,6 +428,22 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 // a datasource is working as expected.
 func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
 	log.DefaultLogger.Info("CheckHealth called", "request", req)
+
+	token := strings.Fields(req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
+	idToken := req.GetHTTPHeader(backend.OAuthIdentityIDTokenHeaderName)
+	log.DefaultLogger.Info("Token", "token", token)
+	log.DefaultLogger.Info("ID Token", "idToken", idToken)
+
+	ctx = context.WithValue(ctx, backend.OAuthIdentityTokenHeaderName, token)
+	ctx = context.WithValue(ctx, backend.OAuthIdentityIDTokenHeaderName, idToken)
+
+	if d.databricksDB == nil {
+		err := d.RefreshDBConnection()
+		if err != nil {
+			log.DefaultLogger.Info("RefreshDBConnection Error", "err", err)
+			return nil, err
+		}
+	}
 
 	rows, err := d.QueryContext(ctx, "SELECT 1")
 

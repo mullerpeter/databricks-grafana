@@ -6,6 +6,7 @@ toolchain go1.24.2
 
 require (
 	github.com/databricks/databricks-sql-go v1.7.0
+	github.com/grafana/grafana-azure-sdk-go v1.13.1
 	github.com/grafana/grafana-plugin-sdk-go v0.277.0
 	golang.org/x/oauth2 v0.29.0
 )
@@ -76,7 +77,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
-	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
+	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.20.5 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect

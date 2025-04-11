@@ -30,12 +30,20 @@ export class ConfigEditor extends PureComponent<Props, State> {
 
     onSelectValueChange = (value: string | undefined, key: string) => {
         const {onOptionsChange, options} = this.props;
+        let jsonData = (options.jsonData || {}) as DatabricksDataSourceOptions;
+        jsonData = {
+            ...jsonData,
+            [key]: value
+        }
+        if (key == 'authenticationMethod') {
+            jsonData = {
+                ...jsonData,
+                oauthPassThru: true,
+            }
+        }
         onOptionsChange({
             ...options,
-            jsonData: {
-                ...options.jsonData,
-                [key]: value,
-            },
+            jsonData: jsonData
         });
     }
 
@@ -117,6 +125,10 @@ export class ConfigEditor extends PureComponent<Props, State> {
                                 {
                                     value: 'oauth2_client_credentials',
                                     label: 'OAuth2 Client Credentials',
+                                },
+                                {
+                                    value: 'azure_ad_forward',
+                                    label: 'Forward Azure AD Auth',
                                 },
                             ]}
                             value={jsonData.authenticationMethod || 'dsn'}
