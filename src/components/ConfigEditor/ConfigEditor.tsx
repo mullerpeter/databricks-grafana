@@ -35,7 +35,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
             ...jsonData,
             [key]: value
         }
-        if (key == 'authenticationMethod') {
+        if (key == 'authenticationMethod' && value == 'azure_entra_pass_thru') {
             jsonData = {
                 ...jsonData,
                 oauthPassThru: true,
@@ -127,8 +127,8 @@ export class ConfigEditor extends PureComponent<Props, State> {
                                     label: 'OAuth2 Client Credentials',
                                 },
                                 {
-                                    value: 'azure_ad_forward',
-                                    label: 'Forward Azure AD Auth',
+                                    value: 'azure_entra_pass_thru',
+                                    label: 'Pass Thru Azure Entra Auth',
                                 },
                             ]}
                             value={jsonData.authenticationMethod || 'dsn'}
@@ -178,7 +178,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
                                 />
                             </InlineField>
                         </>
-                    ) : (
+                    ) : jsonData.authenticationMethod != 'azure_entra_pass_thru' && (
                         <InlineField label="Access Token" labelWidth={30} tooltip="Databricks Personal Access Token">
                             <SecretInput
                                 isConfigured={(secureJsonFields && secureJsonFields.token) as boolean}
