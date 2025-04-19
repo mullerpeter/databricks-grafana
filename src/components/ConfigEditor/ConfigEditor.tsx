@@ -1,5 +1,5 @@
 import React, {ChangeEvent, PureComponent} from 'react';
-import {InlineField, Input, SecretInput, Select} from '@grafana/ui';
+import {InlineField, Input, SecretInput, Select, Alert} from '@grafana/ui';
 import {DataSourcePluginOptionsEditorProps} from '@grafana/data';
 import {DatabricksDataSourceOptions, DatabricksSecureJsonData} from '../../types';
 import {EditorMode} from "@grafana/experimental";
@@ -189,6 +189,12 @@ export class ConfigEditor extends PureComponent<Props, State> {
                                 onChange={(event: ChangeEvent<HTMLInputElement>) => this.onSecureValueChange(event, 'token')}
                             />
                         </InlineField>
+                    )}
+                    {jsonData.authenticationMethod === 'azure_entra_pass_thru' && (
+                        <Alert title="Pass Thru Azure Entra Auth" severity="info">
+                            <p>Pass Thru Azure Entra Auth only works if Azure Entra Auth is setup in Grafana and the user is signed in via Azure Entra SSO. (i.e. Alerts and other backend tasks won't work)</p>
+                            <p>Make sure to set the correct permissions for the Databricks workspace and the SQL warehouse. And add the following Databricks Scope in the Grafana Azure Entra Auth Configuration Settings: "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default"</p>
+                        </Alert>
                     )}
                     <hr/>
                 </div>
