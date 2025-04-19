@@ -65,7 +65,11 @@ grafana/grafana
 
 To configure the plugin use the values provided under JDBC/ODBC in the advanced options of the Databricks Cluster (or SQL Warehouse) and the the Credentials according to the chosen Authentication Method.
 
-You can either authenticate the plugin using a [Personal Access Token (PAT)](https://docs.databricks.com/en/dev-tools/auth/pat.html), via [Databricks M2M OAuth](https://docs.databricks.com/en/dev-tools/auth/oauth-m2m.html) using a Service Principal Client ID and Client Secret or by using an external OAuth Client Credential Endpoint which returns a Databricks token (the OAuth endpoint should implement the default [OAuth Client Credential Grant](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4)) i.e. Azure Entra (OAuth2 Endpoint `https://login.microsoftonline.com/{tenant-id}/oauth2/v2.0/token` & Scope `2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default`).
+##### Authentication Methods
+- [Personal Access Token (PAT)](https://docs.databricks.com/en/dev-tools/auth/pat.html)
+- [Databricks M2M OAuth](https://docs.databricks.com/en/dev-tools/auth/oauth-m2m.html) using a Service Principal Client ID and Client Secret
+- External OAuth Client Credential Endpoint which returns a Databricks token (the OAuth endpoint should implement the default [OAuth Client Credential Grant](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4)) i.e. Azure Entra (OAuth2 Endpoint `https://login.microsoftonline.com/{tenant-id}/oauth2/v2.0/token` & Scope `2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default`)
+- Azure Entra Pass Thru, which uses the Entra Auth token from the signed in user (IMPORTANT: `2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default` has to be added to the scopes of the Entra Auth configuration in Grafana!). Additionally the plugin won't work with this option selected if the user is not signed in via Azure Entra SSO and for backend Grafana Tasks (e.g.Alerting).
 
 ![img_1.png](img/config_editor.png)
 
@@ -76,7 +80,7 @@ Available configuration fields are as follows:
 | Server Hostname        | Databricks Server Hostname (without http). i.e. `XXX.cloud.databricks.com`                                                                                                   |
 | Server Port            | Databricks Server Port (default `443`)                                                                                                                                       |
 | HTTP Path              | HTTP Path value for the existing cluster or SQL warehouse. i.e. `sql/1.0/endpoints/XXX`                                                                                      |
-| Authentication Method  | PAT (Personal Access Token), M2M (Machine to Machine) OAuth or OAuth2 Client Credentials Authentication                                                                      |
+| Authentication Method  | PAT (Personal Access Token), M2M (Machine to Machine) OAuth, OAuth2 Client Credentials Authentication or Azure Entra Pass Thru                                               |
 | Client ID              | Databricks Service Principal Client ID. (only if OAuth / OAuth2 is chosen as Auth Method)                                                                                    |
 | Client Secret          | Databricks Service Principal Client Secret. (only if OAuth / OAuth2 is chosen as Auth Method)                                                                                |
 | Access Token           | Personal Access Token for Databricks. (only if PAT is chosen as Auth Method)                                                                                                 |
@@ -102,32 +106,32 @@ The Datasource configuration can also be done via a YAML file as described [here
 
 ```yaml
 datasources:
-  - name: Databricks
-    type: mullerpeter-databricks-datasource
-    isDefault: true
-    jsonData:
-      hostname: XXX.cloud.databricks.com
-      httpPath: sql/1.0/endpoints/XXX
-      port: 443
-      authenticationMethod: dsn (=PAT) | m2m | oauth2_client_credentials
-      clientId: ...
-      externalCredentialsUrl: ...
-      oauthScopes: api,read
-      timeInterval: 1m
-      maxOpenConns: 0
-      maxIdleConns: 0
-      connMaxLifetime: 3600
-      connMaxIdleTime: 3600
-      retries: 3
-      retryBackoff: 1
-      maxRetryDuration: 60
-      timeout: 60
-      maxRows: 10000
-      defaultQueryFormat: table | time_series
-      defaultEditorMode: builder | code
-    secureJsonData:
-      clientSecret: ...
-      token: ...
+   - name: Databricks
+     type: mullerpeter-databricks-datasource
+     isDefault: true
+     jsonData:
+        hostname: XXX.cloud.databricks.com
+        httpPath: sql/1.0/endpoints/XXX
+        port: 443
+        authenticationMethod: dsn (=PAT) | m2m | oauth2_client_credentials | azure_entra_pass_thru
+        clientId: ...
+        externalCredentialsUrl: ...
+        oauthScopes: api,read
+        timeInterval: 1m
+        maxOpenConns: 0
+        maxIdleConns: 0
+        connMaxLifetime: 3600
+        connMaxIdleTime: 3600
+        retries: 3
+        retryBackoff: 1
+        maxRetryDuration: 60
+        timeout: 60
+        maxRows: 10000
+        defaultQueryFormat: table | time_series
+        defaultEditorMode: builder | code
+     secureJsonData:
+        clientSecret: ...
+        token: ...
 ```
 ### Supported Macros
 
@@ -159,7 +163,7 @@ You can write a query in two ways: using the visual query builder or the code ed
 
 ### Visual Query Builder
 
-Simple queries can be created using the visual query builder. The visual query builder will automatically fetch the avaible catalogs, schemas, tables & columns from the Databricks Instance. The build query will be displayed in the preview window. 
+Simple queries can be created using the visual query builder. The visual query builder will automatically fetch the avaible catalogs, schemas, tables & columns from the Databricks Instance. The build query will be displayed in the preview window.
 
 Support for complex queries is limited, for more complex queries use the code editor, which also supports all available macros.
 
@@ -194,18 +198,18 @@ GROUP BY
 
 ```sql
 SELECT
-    window.start,
-    avg(CAST(o_totalprice AS DOUBLE)),
-    o_orderstatus
+   window.start,
+   avg(CAST(o_totalprice AS DOUBLE)),
+   o_orderstatus
 FROM
-    samples.tpch.orders
+   samples.tpch.orders
 WHERE
-    $__timeFilter(o_orderdate)
+   $__timeFilter(o_orderdate)
 GROUP BY
-    $__timeWindow(o_orderdate),
-    o_orderstatus
+   $__timeWindow(o_orderdate),
+   o_orderstatus
 ORDER BY
-    start;
+start;
 ```
 
 # Development
