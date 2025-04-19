@@ -90,8 +90,9 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 		port = portInt
 	}
 
-	if datasourceSettings.AuthenticationMethod == "m2m" || datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" {
+	if datasourceSettings.AuthenticationMethod == "m2m" || datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" || datasourceSettings.AuthenticationMethod == "azure_entra_pass_thru" {
 		var authenticator auth.Authenticator
+		var tokenStorage *integrations.TokenStorage
 
 		if datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" {
 			if datasourceSettings.ExternalCredentialsUrl == "" {
@@ -111,6 +112,9 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 				datasourceSettings.Hostname,
 				[]string{},
 			)
+		} else if datasourceSettings.AuthenticationMethod == "azure_entra_pass_thru" {
+			tokenStorage = integrations.NewTokenStorage("")
+			authenticator = integrations.NewAuthenticator(tokenStorage)
 		} else {
 			log.DefaultLogger.Info("Authentication Method Parse Error", "err", nil)
 			return nil, fmt.Errorf("authentication Method Parse Error")
@@ -132,18 +136,14 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 			log.DefaultLogger.Info("Init Databricks SQL DB")
 			databricksDB := sql.OpenDB(connector)
 
-			if err := databricksDB.Ping(); err != nil {
-				log.DefaultLogger.Info("Ping Error (Could not ping Databricks)", "err", err)
-				return nil, err
-			}
-
 			SetDatasourceSettings(databricksDB, connectionSettings)
 			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 			return &Datasource{
 				connector:          connector,
 				databricksDB:       databricksDB,
 				connectionSettings: connectionSettings,
-				datasourceSettings: *datasourceSettings,
+				tokenStorage:       tokenStorage,
+				authMethod:         datasourceSettings.AuthenticationMethod,
 			}, nil
 		}
 	} else if datasourceSettings.AuthenticationMethod == "dsn" || datasourceSettings.AuthenticationMethod == "" {
@@ -175,34 +175,9 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 			connector:          connector,
 			databricksDB:       databricksDB,
 			connectionSettings: connectionSettings,
-			datasourceSettings: *datasourceSettings,
+			authMethod:         datasourceSettings.AuthenticationMethod,
 		}, nil
 
-	} else if datasourceSettings.AuthenticationMethod == "azure_entra_pass_thru" {
-
-		tokenStorage := integrations.NewTokenStorage("")
-		authenticator := integrations.NewAuthenticator(tokenStorage)
-		connector, err := dbsql.NewConnector(
-			dbsql.WithServerHostname(datasourceSettings.Hostname),
-			dbsql.WithHTTPPath(datasourceSettings.Path),
-			dbsql.WithPort(port),
-			dbsql.WithAuthenticator(authenticator),
-			dbsql.WithTimeout(connectionSettings.Timeout),
-			dbsql.WithMaxRows(connectionSettings.MaxRows),
-			dbsql.WithRetries(connectionSettings.Retries, connectionSettings.RetryBackoff, connectionSettings.MaxRetryDuration),
-		)
-		if err != nil {
-			log.DefaultLogger.Info("Connector Error", "err", err)
-			return nil, err
-		}
-
-		return &Datasource{
-			connector:          connector,
-			databricksDB:       nil,
-			connectionSettings: connectionSettings,
-			datasourceSettings: *datasourceSettings,
-			tokenStorage:       tokenStorage,
-		}, nil
 	}
 
 	return nil, fmt.Errorf("Invalid Connection Method")
@@ -324,7 +299,7 @@ type Datasource struct {
 	connector          driver.Connector
 	databricksDB       *sql.DB
 	connectionSettings ConnectionSettings
-	datasourceSettings DatasourceSettings
+	authMethod         string
 	tokenStorage       *integrations.TokenStorage
 }
 
@@ -346,9 +321,9 @@ func (d *Datasource) Dispose() {
 func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	log.DefaultLogger.Info("QueryData called", "request", req)
 
-	if d.datasourceSettings.AuthenticationMethod == "azure_entra_pass_thru" {
+	if d.authMethod == "azure_entra_pass_thru" {
 		token := req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName)
-		err := d.CheckAzureEntraPassThru(token)
+		err := d.CheckAzureEntraToken(token)
 		if err != nil {
 			log.DefaultLogger.Error("Azure Entra Connection Failed", "err", err)
 			return nil, err
@@ -456,31 +431,17 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 	return response
 }
 
-func (d *Datasource) CheckAzureEntraPassThru(token string) error {
+func (d *Datasource) CheckAzureEntraToken(token string) error {
 	if token == "" {
 		log.DefaultLogger.Info("Token is empty")
 		return fmt.Errorf("no Azure Entra Token provided")
 	}
-	if d.databricksDB != nil && token == d.tokenStorage.Get() {
+	if token == d.tokenStorage.Get() {
 		return nil
 	}
-	if token != d.tokenStorage.Get() {
-		log.DefaultLogger.Info("Token changed")
-		d.tokenStorage.Update(strings.TrimPrefix(token, "Bearer "))
-	}
-	if d.databricksDB == nil {
-		log.DefaultLogger.Info("Init Databricks SQL DB")
-		databricksDB := sql.OpenDB(d.connector)
 
-		if err := databricksDB.Ping(); err != nil {
-			log.DefaultLogger.Info("Ping Error (Could not ping Databricks)", "err", err)
-			return err
-		}
-
-		SetDatasourceSettings(databricksDB, d.connectionSettings)
-		log.DefaultLogger.Info("Store Databricks SQL DB Connection")
-		d.databricksDB = databricksDB
-	}
+	log.DefaultLogger.Info("Token changed")
+	d.tokenStorage.Update(strings.TrimPrefix(token, "Bearer "))
 
 	return nil
 }
@@ -490,10 +451,10 @@ func (d *Datasource) CheckAzureEntraPassThru(token string) error {
 // datasource configuration page which allows users to verify that
 // a datasource is working as expected.
 func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
-	if d.datasourceSettings.AuthenticationMethod == "azure_entra_pass_thru" {
+	if d.authMethod == "azure_entra_pass_thru" {
 
 		token := req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName)
-		err := d.CheckAzureEntraPassThru(token)
+		err := d.CheckAzureEntraToken(token)
 		if err != nil {
 			return &backend.CheckHealthResult{
 				Status:  backend.HealthStatusError,
