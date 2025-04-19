@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 // TokenStorage is a thread-safe wrapper for the token
@@ -45,7 +43,7 @@ func NewAuthenticator(ts *TokenStorage) *Authenticator {
 
 func (a *Authenticator) Authenticate(r *http.Request) error {
 	if a.tokenStorage.Get() == "" {
-		return errors.New("invalid token")
+		return fmt.Errorf("Empty Token Pass Trough")
 	}
 	r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", a.tokenStorage.Get()))
 	return nil

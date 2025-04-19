@@ -1,5 +1,5 @@
 ARG grafana_version=latest
-ARG grafana_image=grafana
+ARG grafana_image=grafana-enterprise
 
 FROM grafana/${grafana_image}:${grafana_version}
 
@@ -18,7 +18,6 @@ ENV GF_AUTH_ANONYMOUS_ENABLED "true"
 ENV GF_AUTH_BASIC_ENABLED "false"
 # Set development mode so plugins can be loaded without the need to sign
 ENV GF_DEFAULT_APP_MODE "development"
-ENV GF_AZURE_FORWARD_SETTINGS_TO_PLUGINS "mullerpeter-databricks-datasource"
 
 
 LABEL maintainer="Grafana Labs <hello@grafana.com>"
