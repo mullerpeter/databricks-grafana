@@ -6,7 +6,6 @@ toolchain go1.24.2
 
 require (
 	github.com/databricks/databricks-sql-go v1.7.0
-	github.com/grafana/grafana-azure-sdk-go v1.13.1
 	github.com/grafana/grafana-plugin-sdk-go v0.277.0
 	golang.org/x/oauth2 v0.29.0
 )
