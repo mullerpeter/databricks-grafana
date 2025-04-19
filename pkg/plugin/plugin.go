@@ -15,7 +15,6 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/data"
 	"github.com/grafana/grafana-plugin-sdk-go/data/sqlutil"
 	"github.com/mullerpeter/databricks-grafana/pkg/integrations"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -397,30 +396,7 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 		return response
 	}
 
-	dateConverter := sqlutil.Converter{
-		Name:          "Databricks date to timestamp converter",
-		InputScanType: reflect.TypeOf(sql.NullString{}),
-		InputTypeName: "DATE",
-		FrameConverter: sqlutil.FrameConverter{
-			FieldType: data.FieldTypeNullableTime,
-			ConverterFunc: func(n interface{}) (interface{}, error) {
-				v := n.(*sql.NullString)
-
-				if !v.Valid {
-					return (*time.Time)(nil), nil
-				}
-
-				f := v.String
-				date, error := time.Parse("2006-01-02", f)
-				if error != nil {
-					return (*time.Time)(nil), error
-				}
-				return &date, nil
-			},
-		},
-	}
-
-	frame, err = sqlutil.FrameFromRows(rows, -1, dateConverter)
+	frame, err = sqlutil.FrameFromRows(rows, -1)
 	if err != nil {
 		log.DefaultLogger.Info("FrameFromRows", "err", err)
 		response.Error = err
