@@ -71,7 +71,7 @@ type ConnectionSettings struct {
 }
 
 // NewSampleDatasource creates a new datasource instance.
-func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
+func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
 	datasourceSettings := new(DatasourceSettings)
 	err := json.Unmarshal(settings.JSONData, datasourceSettings)
 	if err != nil {
@@ -90,8 +90,9 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 		port = portInt
 	}
 
-	if datasourceSettings.AuthenticationMethod == "m2m" || datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" {
+	if datasourceSettings.AuthenticationMethod == "m2m" || datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" || datasourceSettings.AuthenticationMethod == "azure_entra_pass_thru" {
 		var authenticator auth.Authenticator
+		var tokenStorage *integrations.TokenStorage
 
 		if datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" {
 			if datasourceSettings.ExternalCredentialsUrl == "" {
@@ -111,6 +112,9 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 				datasourceSettings.Hostname,
 				[]string{},
 			)
+		} else if datasourceSettings.AuthenticationMethod == "azure_entra_pass_thru" {
+			tokenStorage = integrations.NewTokenStorage("")
+			authenticator = integrations.NewAuthenticator(tokenStorage)
 		} else {
 			log.DefaultLogger.Info("Authentication Method Parse Error", "err", nil)
 			return nil, fmt.Errorf("authentication Method Parse Error")
@@ -132,17 +136,14 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 			log.DefaultLogger.Info("Init Databricks SQL DB")
 			databricksDB := sql.OpenDB(connector)
 
-			if err := databricksDB.Ping(); err != nil {
-				log.DefaultLogger.Info("Ping Error (Could not ping Databricks)", "err", err)
-				return nil, err
-			}
-
 			SetDatasourceSettings(databricksDB, connectionSettings)
 			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
 			return &Datasource{
 				connector:          connector,
 				databricksDB:       databricksDB,
 				connectionSettings: connectionSettings,
+				tokenStorage:       tokenStorage,
+				authMethod:         datasourceSettings.AuthenticationMethod,
 			}, nil
 		}
 	} else if datasourceSettings.AuthenticationMethod == "dsn" || datasourceSettings.AuthenticationMethod == "" {
@@ -174,6 +175,7 @@ func NewSampleDatasource(_ context.Context, settings backend.DataSourceInstanceS
 			connector:          connector,
 			databricksDB:       databricksDB,
 			connectionSettings: connectionSettings,
+			authMethod:         datasourceSettings.AuthenticationMethod,
 		}, nil
 
 	}
@@ -297,6 +299,8 @@ type Datasource struct {
 	connector          driver.Connector
 	databricksDB       *sql.DB
 	connectionSettings ConnectionSettings
+	authMethod         string
+	tokenStorage       *integrations.TokenStorage
 }
 
 func (d *Datasource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
@@ -316,6 +320,15 @@ func (d *Datasource) Dispose() {
 // contains Frames ([]*Frame).
 func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	log.DefaultLogger.Info("QueryData called", "request", req)
+
+	if d.authMethod == "azure_entra_pass_thru" {
+		token := req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName)
+		err := d.CheckAzureEntraToken(token)
+		if err != nil {
+			log.DefaultLogger.Error("Azure Entra Connection Failed", "err", err)
+			return nil, err
+		}
+	}
 
 	// create response struct
 	response := backend.NewQueryDataResponse()
@@ -418,11 +431,37 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 	return response
 }
 
+func (d *Datasource) CheckAzureEntraToken(token string) error {
+	if token == "" {
+		log.DefaultLogger.Info("Token is empty")
+		return fmt.Errorf("no Azure Entra Token provided")
+	}
+	if token == d.tokenStorage.Get() {
+		return nil
+	}
+
+	log.DefaultLogger.Info("Token changed")
+	d.tokenStorage.Update(strings.TrimPrefix(token, "Bearer "))
+
+	return nil
+}
+
 // CheckHealth handles health checks sent from Grafana to the plugin.
 // The main use case for these health checks is the test button on the
 // datasource configuration page which allows users to verify that
 // a datasource is working as expected.
 func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
+	if d.authMethod == "azure_entra_pass_thru" {
+
+		token := req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName)
+		err := d.CheckAzureEntraToken(token)
+		if err != nil {
+			return &backend.CheckHealthResult{
+				Status:  backend.HealthStatusError,
+				Message: fmt.Sprintf("Azure Entra Connection Failed: %s", err),
+			}, nil
+		}
+	}
 	log.DefaultLogger.Info("CheckHealth called", "request", req)
 
 	rows, err := d.QueryContext(ctx, "SELECT 1")

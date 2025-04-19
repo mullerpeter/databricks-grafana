@@ -1,5 +1,5 @@
 import React, {ChangeEvent, PureComponent} from 'react';
-import {InlineField, Input, SecretInput, Select} from '@grafana/ui';
+import {InlineField, Input, SecretInput, Select, Alert} from '@grafana/ui';
 import {DataSourcePluginOptionsEditorProps} from '@grafana/data';
 import {DatabricksDataSourceOptions, DatabricksSecureJsonData} from '../../types';
 import {EditorMode} from "@grafana/experimental";
@@ -30,12 +30,20 @@ export class ConfigEditor extends PureComponent<Props, State> {
 
     onSelectValueChange = (value: string | undefined, key: string) => {
         const {onOptionsChange, options} = this.props;
+        let jsonData = (options.jsonData || {}) as DatabricksDataSourceOptions;
+        jsonData = {
+            ...jsonData,
+            [key]: value
+        }
+        if (key == 'authenticationMethod' && value == 'azure_entra_pass_thru') {
+            jsonData = {
+                ...jsonData,
+                oauthPassThru: true,
+            }
+        }
         onOptionsChange({
             ...options,
-            jsonData: {
-                ...options.jsonData,
-                [key]: value,
-            },
+            jsonData: jsonData
         });
     }
 
@@ -100,7 +108,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
                     </InlineField>
                     <h4 style={{margin: "1em 0 0.6em 0"}}>Authentication</h4>
                     <InlineField label="Authentication Method" labelWidth={30}
-                                 tooltip="PAT (Personal Access Token), M2M (Machine to Machine) OAuth or OAuth 2.0 Client Credentials (not Databricks M2M) Authentication">
+                                 tooltip="PAT (Personal Access Token), M2M (Machine to Machine) OAuth, OAuth 2.0 Client Credentials (not Databricks M2M) Authentication or Azure Entra Pass Thru (only work if Entra Auth is setup and user is signed in via Entra)">
                         <Select
                             onChange={({value}) => {
                                 this.onSelectValueChange(value, 'authenticationMethod');
@@ -117,6 +125,10 @@ export class ConfigEditor extends PureComponent<Props, State> {
                                 {
                                     value: 'oauth2_client_credentials',
                                     label: 'OAuth2 Client Credentials',
+                                },
+                                {
+                                    value: 'azure_entra_pass_thru',
+                                    label: 'Pass Thru Azure Entra Auth',
                                 },
                             ]}
                             value={jsonData.authenticationMethod || 'dsn'}
@@ -166,7 +178,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
                                 />
                             </InlineField>
                         </>
-                    ) : (
+                    ) : jsonData.authenticationMethod != 'azure_entra_pass_thru' && (
                         <InlineField label="Access Token" labelWidth={30} tooltip="Databricks Personal Access Token">
                             <SecretInput
                                 isConfigured={(secureJsonFields && secureJsonFields.token) as boolean}
@@ -177,6 +189,12 @@ export class ConfigEditor extends PureComponent<Props, State> {
                                 onChange={(event: ChangeEvent<HTMLInputElement>) => this.onSecureValueChange(event, 'token')}
                             />
                         </InlineField>
+                    )}
+                    {jsonData.authenticationMethod === 'azure_entra_pass_thru' && (
+                        <Alert title="Pass Thru Azure Entra Auth" severity="info">
+                            <p>Pass Thru Azure Entra Auth only works if Azure Entra Auth is setup in Grafana and the user is signed in via Azure Entra SSO. (i.e. Alerts and other backend tasks won't work)</p>
+                            <p>Make sure to set the correct permissions for the Databricks workspace and the SQL warehouse. And add the following Databricks Scope in the Grafana Azure Entra Auth Configuration Settings: "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default"</p>
+                        </Alert>
                     )}
                     <hr/>
                 </div>
