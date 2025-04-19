@@ -180,11 +180,28 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 
 	} else if datasourceSettings.AuthenticationMethod == "azure_entra_pass_thru" {
 
+		tokenStorage := integrations.NewTokenStorage("")
+		authenticator := integrations.NewAuthenticator(tokenStorage)
+		connector, err := dbsql.NewConnector(
+			dbsql.WithServerHostname(datasourceSettings.Hostname),
+			dbsql.WithHTTPPath(datasourceSettings.Path),
+			dbsql.WithPort(port),
+			dbsql.WithAuthenticator(authenticator),
+			dbsql.WithTimeout(connectionSettings.Timeout),
+			dbsql.WithMaxRows(connectionSettings.MaxRows),
+			dbsql.WithRetries(connectionSettings.Retries, connectionSettings.RetryBackoff, connectionSettings.MaxRetryDuration),
+		)
+		if err != nil {
+			log.DefaultLogger.Info("Connector Error", "err", err)
+			return nil, err
+		}
+
 		return &Datasource{
-			connector:          nil,
+			connector:          connector,
 			databricksDB:       nil,
 			connectionSettings: connectionSettings,
 			datasourceSettings: *datasourceSettings,
+			tokenStorage:       tokenStorage,
 		}, nil
 	}
 
@@ -308,7 +325,7 @@ type Datasource struct {
 	databricksDB       *sql.DB
 	connectionSettings ConnectionSettings
 	datasourceSettings DatasourceSettings
-	token              string
+	tokenStorage       *integrations.TokenStorage
 }
 
 func (d *Datasource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
@@ -444,44 +461,16 @@ func (d *Datasource) CheckAzureEntraPassThru(token string) error {
 		log.DefaultLogger.Info("Token is empty")
 		return fmt.Errorf("no Azure Entra Token provided")
 	}
-	if d.databricksDB != nil && token == d.token {
+	if d.databricksDB != nil && token == d.tokenStorage.Get() {
 		return nil
 	}
-	if token != d.token {
-		log.DefaultLogger.Info("Token is different")
-		d.token = strings.TrimPrefix(token, "Bearer ")
+	if token != d.tokenStorage.Get() {
+		log.DefaultLogger.Info("Token changed")
+		d.tokenStorage.Update(strings.TrimPrefix(token, "Bearer "))
 	}
-	if d.databricksDB != nil {
-		err := d.databricksDB.Close()
-		if err != nil {
-			log.DefaultLogger.Info("Error closing DB connection", "err", err)
-		}
-	}
-	port := 443
-	if d.datasourceSettings.Port != "" {
-		portInt, err := strconv.Atoi(d.datasourceSettings.Port)
-		if err != nil {
-			log.DefaultLogger.Info("Port Parse Error", "err", err)
-			return err
-		}
-		port = portInt
-	}
-
-	connector, err := dbsql.NewConnector(
-		dbsql.WithAccessToken(d.token),
-		dbsql.WithServerHostname(d.datasourceSettings.Hostname),
-		dbsql.WithHTTPPath(d.datasourceSettings.Path),
-		dbsql.WithPort(port),
-		dbsql.WithTimeout(d.connectionSettings.Timeout),
-		dbsql.WithMaxRows(d.connectionSettings.MaxRows),
-		dbsql.WithRetries(d.connectionSettings.Retries, d.connectionSettings.RetryBackoff, d.connectionSettings.MaxRetryDuration),
-	)
-	if err != nil {
-		log.DefaultLogger.Info("Connector Error", "err", err)
-		return err
-	} else {
+	if d.databricksDB == nil {
 		log.DefaultLogger.Info("Init Databricks SQL DB")
-		databricksDB := sql.OpenDB(connector)
+		databricksDB := sql.OpenDB(d.connector)
 
 		if err := databricksDB.Ping(); err != nil {
 			log.DefaultLogger.Info("Ping Error (Could not ping Databricks)", "err", err)
@@ -490,9 +479,9 @@ func (d *Datasource) CheckAzureEntraPassThru(token string) error {
 
 		SetDatasourceSettings(databricksDB, d.connectionSettings)
 		log.DefaultLogger.Info("Store Databricks SQL DB Connection")
-		d.connector = connector
 		d.databricksDB = databricksDB
 	}
+
 	return nil
 }
 
