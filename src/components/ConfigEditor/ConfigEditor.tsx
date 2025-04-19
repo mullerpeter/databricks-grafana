@@ -108,7 +108,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
                     </InlineField>
                     <h4 style={{margin: "1em 0 0.6em 0"}}>Authentication</h4>
                     <InlineField label="Authentication Method" labelWidth={30}
-                                 tooltip="PAT (Personal Access Token), M2M (Machine to Machine) OAuth or OAuth 2.0 Client Credentials (not Databricks M2M) Authentication">
+                                 tooltip="PAT (Personal Access Token), M2M (Machine to Machine) OAuth, OAuth 2.0 Client Credentials (not Databricks M2M) Authentication or Azure Entra Pass Thru (only work if Entra Auth is setup and user is signed in via Entra)">
                         <Select
                             onChange={({value}) => {
                                 this.onSelectValueChange(value, 'authenticationMethod');
