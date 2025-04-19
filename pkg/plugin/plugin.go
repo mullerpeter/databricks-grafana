@@ -451,6 +451,12 @@ func (d *Datasource) CheckAzureEntraPassThru(token string) error {
 		log.DefaultLogger.Info("Token is different")
 		d.token = strings.TrimPrefix(token, "Bearer ")
 	}
+	if d.databricksDB != nil {
+		err := d.databricksDB.Close()
+		if err != nil {
+			log.DefaultLogger.Info("Error closing DB connection", "err", err)
+		}
+	}
 	port := 443
 	if d.datasourceSettings.Port != "" {
 		portInt, err := strconv.Atoi(d.datasourceSettings.Port)
