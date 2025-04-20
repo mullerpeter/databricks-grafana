@@ -321,13 +321,10 @@ func (d *Datasource) Dispose() {
 func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	log.DefaultLogger.Info("QueryData called", "request", req)
 
-	if d.authMethod == "azure_entra_pass_thru" {
-		token := req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName)
-		err := d.CheckAzureEntraToken(token)
-		if err != nil {
-			log.DefaultLogger.Error("Azure Entra Connection Failed", "err", err)
-			return nil, err
-		}
+	err := d.CheckAzureEntraPassThru(req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
+	if err != nil {
+		log.DefaultLogger.Error("Azure Entra Connection Failed", "err", err)
+		return nil, err
 	}
 
 	// create response struct
@@ -431,17 +428,20 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 	return response
 }
 
-func (d *Datasource) CheckAzureEntraToken(token string) error {
+func (d *Datasource) CheckAzureEntraPassThru(token string) error {
+
+	if d.authMethod != "azure_entra_pass_thru" {
+		return nil
+	}
+
 	if token == "" {
 		log.DefaultLogger.Info("Token is empty")
 		return fmt.Errorf("no Azure Entra Token provided")
 	}
-	if token == d.tokenStorage.Get() {
-		return nil
+	if token != d.tokenStorage.Get() {
+		log.DefaultLogger.Info("Token updated")
+		d.tokenStorage.Update(token)
 	}
-
-	log.DefaultLogger.Info("Token changed")
-	d.tokenStorage.Update(strings.TrimPrefix(token, "Bearer "))
 
 	return nil
 }
@@ -451,18 +451,15 @@ func (d *Datasource) CheckAzureEntraToken(token string) error {
 // datasource configuration page which allows users to verify that
 // a datasource is working as expected.
 func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
-	if d.authMethod == "azure_entra_pass_thru" {
-
-		token := req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName)
-		err := d.CheckAzureEntraToken(token)
-		if err != nil {
-			return &backend.CheckHealthResult{
-				Status:  backend.HealthStatusError,
-				Message: fmt.Sprintf("Azure Entra Connection Failed: %s", err),
-			}, nil
-		}
-	}
 	log.DefaultLogger.Info("CheckHealth called", "request", req)
+
+	err := d.CheckAzureEntraPassThru(req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
+	if err != nil {
+		return &backend.CheckHealthResult{
+			Status:  backend.HealthStatusError,
+			Message: fmt.Sprintf("Azure Entra Connection Failed: %s", err),
+		}, nil
+	}
 
 	rows, err := d.QueryContext(ctx, "SELECT 1")
 
