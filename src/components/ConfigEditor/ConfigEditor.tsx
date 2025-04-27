@@ -35,10 +35,17 @@ export class ConfigEditor extends PureComponent<Props, State> {
             ...jsonData,
             [key]: value
         }
-        if (key == 'authenticationMethod' && value == 'azure_entra_pass_thru') {
-            jsonData = {
-                ...jsonData,
-                oauthPassThru: true,
+        if (key == 'authenticationMethod') {
+            if (value == 'oauth2_pass_through') {
+                jsonData = {
+                    ...jsonData,
+                    oauthPassThru: true,
+                }
+            } else {
+                jsonData = {
+                    ...jsonData,
+                    oauthPassThru: false,
+                }
             }
         }
         onOptionsChange({
@@ -127,8 +134,8 @@ export class ConfigEditor extends PureComponent<Props, State> {
                                     label: 'OAuth2 Client Credentials',
                                 },
                                 {
-                                    value: 'azure_entra_pass_thru',
-                                    label: 'Pass Thru Azure Entra Auth',
+                                    value: 'oauth2_pass_through',
+                                    label: 'OAuth2 pass-through',
                                 },
                             ]}
                             value={jsonData.authenticationMethod || 'dsn'}
@@ -178,7 +185,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
                                 />
                             </InlineField>
                         </>
-                    ) : jsonData.authenticationMethod != 'azure_entra_pass_thru' && (
+                    ) : jsonData.authenticationMethod != 'oauth2_pass_through' && (
                         <InlineField label="Access Token" labelWidth={30} tooltip="Databricks Personal Access Token">
                             <SecretInput
                                 isConfigured={(secureJsonFields && secureJsonFields.token) as boolean}
@@ -190,10 +197,11 @@ export class ConfigEditor extends PureComponent<Props, State> {
                             />
                         </InlineField>
                     )}
-                    {jsonData.authenticationMethod === 'azure_entra_pass_thru' && (
-                        <Alert title="Pass Thru Azure Entra Auth" severity="info">
-                            <p>Pass Thru Azure Entra Auth only works if Azure Entra Auth is setup in Grafana and the user is signed in via Azure Entra SSO. (i.e. Alerts and other backend tasks won't work)</p>
-                            <p>Make sure to set the correct permissions for the Databricks workspace and the SQL warehouse. And add the following Databricks Scope in the Grafana Azure Entra Auth Configuration Settings: "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default"</p>
+                    {jsonData.authenticationMethod === 'oauth2_pass_through' && (
+                        <Alert title="OAuth2 pass-trough" severity="info">
+                            <p>OAuth2 pass-trough only works if SSO Auth (i.e. Azure AD/Entra) is setup in Grafana and the user is signed in via SSO. (i.e. Alerts and other backend tasks won't work)</p>
+                            <p>Make sure to set the correct permissions for the Databricks workspace and the SQL warehouse and add the correct scope in the Grafana Authentication Settings for you SSO Auth Provider.</p>
+                            <p>i.E. for Azure AD/Entra SSO Auth the following scope has to be added: "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default" (AzureDatabricks/user_impersonation)</p>
                         </Alert>
                     )}
                     <hr/>

@@ -69,7 +69,7 @@ To configure the plugin use the values provided under JDBC/ODBC in the advanced 
 - [Personal Access Token (PAT)](https://docs.databricks.com/en/dev-tools/auth/pat.html)
 - [Databricks M2M OAuth](https://docs.databricks.com/en/dev-tools/auth/oauth-m2m.html) using a Service Principal Client ID and Client Secret
 - External OAuth Client Credential Endpoint which returns a Databricks token (the OAuth endpoint should implement the default [OAuth Client Credential Grant](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4)) i.e. Azure Entra (OAuth2 Endpoint `https://login.microsoftonline.com/{tenant-id}/oauth2/v2.0/token` & Scope `2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default`)
-- Azure Entra Pass Thru, which uses the Entra Auth token from the signed in user (IMPORTANT: `2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default` has to be added to the scopes of the Entra Auth configuration in Grafana!). Additionally the plugin won't work with this option selected if the user is not signed in via Azure Entra SSO and for backend Grafana Tasks (e.g.Alerting).
+- OAuth2 pass-trough, which forwards the Grafana SSO OAuth (i.e. Azure AD/Entra) token from the signed-in user to the plugin. Make sure to set the correct scope in the SSO OAuth configuration of Grafana for your Auth provider. i.E. for Azure AD/Entra SSO Auth the scope `2ff814a6-3304-4ab8-85cb-cd0e6f879c1d/.default` (AzureDatabricks/user_impersonation) has to be added to the scopes of the Auth configuration in Grafana! Additionally, the plugin won't work with this option selected if the user is not signed in SSO and for backend Grafana Tasks (e.g.Alerting).
 
 ![img_1.png](img/config_editor.png)
 
@@ -80,7 +80,7 @@ Available configuration fields are as follows:
 | Server Hostname        | Databricks Server Hostname (without http). i.e. `XXX.cloud.databricks.com`                                                                                                   |
 | Server Port            | Databricks Server Port (default `443`)                                                                                                                                       |
 | HTTP Path              | HTTP Path value for the existing cluster or SQL warehouse. i.e. `sql/1.0/endpoints/XXX`                                                                                      |
-| Authentication Method  | PAT (Personal Access Token), M2M (Machine to Machine) OAuth, OAuth2 Client Credentials Authentication or Azure Entra Pass Thru                                               |
+| Authentication Method  | PAT (Personal Access Token), M2M (Machine to Machine) OAuth, OAuth2 Client Credentials Authentication or OAuth pass-through                                                  |
 | Client ID              | Databricks Service Principal Client ID. (only if OAuth / OAuth2 is chosen as Auth Method)                                                                                    |
 | Client Secret          | Databricks Service Principal Client Secret. (only if OAuth / OAuth2 is chosen as Auth Method)                                                                                |
 | Access Token           | Personal Access Token for Databricks. (only if PAT is chosen as Auth Method)                                                                                                 |
@@ -113,7 +113,7 @@ datasources:
       hostname: XXX.cloud.databricks.com
       httpPath: sql/1.0/endpoints/XXX
       port: 443
-      authenticationMethod: dsn (=PAT) | m2m | oauth2_client_credentials | azure_entra_pass_thru
+      authenticationMethod: dsn (=PAT) | m2m | oauth2_client_credentials | oauth2_pass_through
       clientId: ...
       externalCredentialsUrl: ...
       oauthScopes: api,read

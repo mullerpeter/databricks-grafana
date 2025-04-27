@@ -27,15 +27,15 @@ func (ts *TokenStorage) Update(newToken string) {
 	ts.token = newToken
 }
 
-type Authenticator struct {
+type OAuthPassThroughAuthenticator struct {
 	tokenStorage *TokenStorage
 }
 
-func NewAuthenticator(ts *TokenStorage) *Authenticator {
-	return &Authenticator{tokenStorage: ts}
+func NewOAuthPassThroughAuthenticator(ts *TokenStorage) *OAuthPassThroughAuthenticator {
+	return &OAuthPassThroughAuthenticator{tokenStorage: ts}
 }
 
-func (a *Authenticator) Authenticate(r *http.Request) error {
+func (a *OAuthPassThroughAuthenticator) Authenticate(r *http.Request) error {
 	if a.tokenStorage.Get() == "" {
 		return fmt.Errorf("Empty Token Pass Trough")
 	}
