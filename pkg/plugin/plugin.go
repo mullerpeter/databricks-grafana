@@ -90,7 +90,7 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 		port = portInt
 	}
 
-	if datasourceSettings.AuthenticationMethod == "m2m" || datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" || datasourceSettings.AuthenticationMethod == "azure_entra_pass_thru" {
+	if datasourceSettings.AuthenticationMethod == "m2m" || datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" || datasourceSettings.AuthenticationMethod == "azure_entra_pass_thru" || datasourceSettings.AuthenticationMethod == "oauth2_pass_through" {
 		var authenticator auth.Authenticator
 		var tokenStorage *integrations.TokenStorage
 
@@ -112,9 +112,9 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 				datasourceSettings.Hostname,
 				[]string{},
 			)
-		} else if datasourceSettings.AuthenticationMethod == "azure_entra_pass_thru" {
+		} else if datasourceSettings.AuthenticationMethod == "azure_entra_pass_thru" || datasourceSettings.AuthenticationMethod == "oauth2_pass_through" {
 			tokenStorage = integrations.NewTokenStorage("")
-			authenticator = integrations.NewAuthenticator(tokenStorage)
+			authenticator = integrations.NewOAuthPassThroughAuthenticator(tokenStorage)
 		} else {
 			log.DefaultLogger.Info("Authentication Method Parse Error", "err", nil)
 			return nil, fmt.Errorf("authentication Method Parse Error")
@@ -304,6 +304,11 @@ type Datasource struct {
 }
 
 func (d *Datasource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
+	err := d.CheckOAuthPassTrough(req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
+	if err != nil {
+		log.DefaultLogger.Error("OAuth2 Pass Through Authentication failed", "err", err)
+		return err
+	}
 	return autocompletionQueries(ctx, req, sender, d)
 }
 
@@ -321,9 +326,9 @@ func (d *Datasource) Dispose() {
 func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	log.DefaultLogger.Info("QueryData called", "request", req)
 
-	err := d.CheckAzureEntraPassThru(req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
+	err := d.CheckOAuthPassTrough(req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
 	if err != nil {
-		log.DefaultLogger.Error("Azure Entra Connection Failed", "err", err)
+		log.DefaultLogger.Error("OAuth2 Pass Through Authentication failed", "err", err)
 		return nil, err
 	}
 
@@ -428,15 +433,15 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 	return response
 }
 
-func (d *Datasource) CheckAzureEntraPassThru(token string) error {
+func (d *Datasource) CheckOAuthPassTrough(token string) error {
 
-	if d.authMethod != "azure_entra_pass_thru" {
+	if d.authMethod != "azure_entra_pass_thru" && d.authMethod != "oauth2_pass_through" {
 		return nil
 	}
 
 	if token == "" {
 		log.DefaultLogger.Info("Token is empty")
-		return fmt.Errorf("no Azure Entra Token provided")
+		return fmt.Errorf("No OAuth Token passed through")
 	}
 	if token != d.tokenStorage.Get() {
 		log.DefaultLogger.Info("Token updated")
@@ -453,11 +458,11 @@ func (d *Datasource) CheckAzureEntraPassThru(token string) error {
 func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
 	log.DefaultLogger.Info("CheckHealth called", "request", req)
 
-	err := d.CheckAzureEntraPassThru(req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
+	err := d.CheckOAuthPassTrough(req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
 	if err != nil {
 		return &backend.CheckHealthResult{
 			Status:  backend.HealthStatusError,
-			Message: fmt.Sprintf("Azure Entra Connection Failed: %s", err),
+			Message: fmt.Sprintf("OAuth2 Pass Through Authentication failed: %s", err),
 		}, nil
 	}
 
