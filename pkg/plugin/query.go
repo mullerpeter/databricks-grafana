@@ -4,45 +4,29 @@ import (
 	"fmt"
 	"github.com/grafana/grafana-plugin-sdk-go/backend"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
-	"math"
 	"regexp"
 	"strings"
 	"time"
 )
 
 func getIntervalString(duration time.Duration) string {
-	hours := int(math.Floor(duration.Hours()))
-	minutes := int(math.Floor(duration.Minutes()))
-	seconds := int(math.Floor(duration.Seconds()))
-	milliseconds := int(duration.Milliseconds())
-
-	returnString := ""
-
-	deliminator := ""
-	if hours > 0 {
-		returnString = fmt.Sprintf("%s%s%d HOURS", returnString, deliminator, hours)
-		deliminator = " "
+	parts := []string{}
+	if hours := int(duration.Hours()); hours > 0 {
+		parts = append(parts, fmt.Sprintf("%d HOURS", hours))
+		duration -= time.Duration(hours) * time.Hour
 	}
-
-	remainingMinutes := minutes - (hours * 60)
-	if remainingMinutes > 0 {
-		returnString = fmt.Sprintf("%s%s%d MINUTES", returnString, deliminator, remainingMinutes)
-		deliminator = " "
+	if minutes := int(duration.Minutes()); minutes > 0 {
+		parts = append(parts, fmt.Sprintf("%d MINUTES", minutes))
+		duration -= time.Duration(minutes) * time.Minute
 	}
-
-	remainingSeconds := seconds - (minutes * 60)
-	if remainingSeconds > 0 {
-		returnString = fmt.Sprintf("%s%s%d SECONDS", returnString, deliminator, remainingSeconds)
-		deliminator = " "
+	if seconds := int(duration.Seconds()); seconds > 0 {
+		parts = append(parts, fmt.Sprintf("%d SECONDS", seconds))
+		duration -= time.Duration(seconds) * time.Second
 	}
-
-	remainingMilliseconds := milliseconds - (seconds * 1000)
-	if remainingMilliseconds > 0 {
-		returnString = fmt.Sprintf("%s%s%d MILLISECONDS", returnString, deliminator, remainingMilliseconds)
-		deliminator = " "
+	if milliseconds := int(duration.Milliseconds()); milliseconds > 0 {
+		parts = append(parts, fmt.Sprintf("%d MILLISECONDS", milliseconds))
 	}
-
-	return returnString
+	return strings.Join(parts, " ")
 }
 
 func replaceMacros(sqlQuery string, query backend.DataQuery) string {

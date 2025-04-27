@@ -1,9 +1,10 @@
 import React, {ChangeEvent, PureComponent} from 'react';
-import {InlineField, Input, SecretInput, Select, Alert} from '@grafana/ui';
+import {Alert} from '@grafana/ui';
 import {DataSourcePluginOptionsEditorProps} from '@grafana/data';
 import {DatabricksDataSourceOptions, DatabricksSecureJsonData} from '../../types';
 import {EditorMode} from "@grafana/experimental";
 import {QueryFormat} from "../grafana-sql/src";
+import {ConfigInputField, ConfigSelectField, ConfigSecretInputField} from "./ConfigFields";
 
 interface Props extends DataSourcePluginOptionsEditorProps<DatabricksDataSourceOptions> {
 }
@@ -36,16 +37,9 @@ export class ConfigEditor extends PureComponent<Props, State> {
             [key]: value
         }
         if (key == 'authenticationMethod') {
-            if (value == 'oauth2_pass_through') {
-                jsonData = {
-                    ...jsonData,
-                    oauthPassThru: true,
-                }
-            } else {
-                jsonData = {
-                    ...jsonData,
-                    oauthPassThru: false,
-                }
+            jsonData = {
+                ...jsonData,
+                oauthPassThru: value === 'oauth2_pass_through',
             }
         }
         onOptionsChange({
@@ -54,27 +48,24 @@ export class ConfigEditor extends PureComponent<Props, State> {
         });
     }
 
-    onValueChange = (event: ChangeEvent<HTMLInputElement>, key: string) => {
+    handleValueChange = (event: ChangeEvent<HTMLInputElement>, key: string, isSecure: boolean = false) => {
         const {onOptionsChange, options} = this.props;
-        onOptionsChange({
-            ...options,
-            jsonData: {
-                ...options.jsonData,
-                [key]: event.target.value,
-            },
-        });
-    };
-
-    // Secure field (only sent to the backend)
-    onSecureValueChange = (event: ChangeEvent<HTMLInputElement>, key: string) => {
-        const {onOptionsChange, options} = this.props;
-        onOptionsChange({
-            ...options,
-            secureJsonData: {
-                ...options.secureJsonData,
-                [key]: event.target.value,
-            },
-        });
+        const updatedOptions = isSecure
+            ? {
+                ...options,
+                secureJsonData: {
+                    ...options.secureJsonData,
+                    [key]: event.target.value,
+                },
+            }
+            : {
+                ...options,
+                jsonData: {
+                    ...options.jsonData,
+                    [key]: event.target.value,
+                },
+            };
+        onOptionsChange(updatedOptions);
     };
 
     render() {
@@ -87,115 +78,98 @@ export class ConfigEditor extends PureComponent<Props, State> {
             <>
                 <h4 style={{margin: "0 0 0.6em 0"}}>Connection</h4>
                 <div className="gf-form-group">
-                    <InlineField label="Server Hostname" labelWidth={30}
-                                 tooltip="Databricks Server Hostname (without http)">
-                        <Input
-                            value={jsonData.hostname || ''}
-                            placeholder="XXX.cloud.databricks.com"
-                            width={40}
-                            onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'hostname')}
-                        />
-                    </InlineField>
-                    <InlineField label="Server Port" labelWidth={30} tooltip="Databricks Server Port">
-                        <Input
-                            value={jsonData.port || ''}
-                            placeholder="443"
-                            width={40}
-                            onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'port')}
-                        />
-                    </InlineField>
-                    <InlineField label="HTTP Path" labelWidth={30}
-                                 tooltip="HTTP Path value for the existing cluster or SQL warehouse.">
-                        <Input
-                            value={jsonData.path || ''}
-                            placeholder="sql/1.0/endpoints/XXX"
-                            width={40}
-                            onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'path')}
-                        />
-                    </InlineField>
+                    <ConfigInputField
+                        label="Server Hostname"
+                        tooltip="Databricks Server Hostname (without http)"
+                        value={jsonData.hostname || ''}
+                        placeholder="XXX.cloud.databricks.com"
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'hostname')}
+                    />
+                    <ConfigInputField
+                        label={"Server Port"}
+                        tooltip={"Databricks Server Port"}
+                        value={jsonData.port || ''}
+                        placeholder={"443"}
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'port')}/>
+                    <ConfigInputField
+                        label="HTTP Path"
+                        tooltip="HTTP Path value for the existing cluster or SQL warehouse."
+                        value={jsonData.path || ''}
+                        placeholder="sql/1.0/endpoints/XXX"
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'path')}
+                    />
                     <h4 style={{margin: "1em 0 0.6em 0"}}>Authentication</h4>
-                    <InlineField label="Authentication Method" labelWidth={30}
-                                 tooltip="PAT (Personal Access Token), M2M (Machine to Machine) OAuth, OAuth 2.0 Client Credentials (not Databricks M2M) Authentication or Azure Entra Pass Thru (only work if Entra Auth is setup and user is signed in via Entra)">
-                        <Select
-                            onChange={({value}) => {
-                                this.onSelectValueChange(value, 'authenticationMethod');
-                            }}
-                            options={[
-                                {
-                                    value: 'dsn',
-                                    label: 'PAT',
-                                },
-                                {
-                                    value: 'm2m',
-                                    label: 'M2M Oauth',
-                                },
-                                {
-                                    value: 'oauth2_client_credentials',
-                                    label: 'OAuth2 Client Credentials',
-                                },
-                                {
-                                    value: 'oauth2_pass_through',
-                                    label: 'OAuth2 pass-through',
-                                },
-                            ]}
-                            value={jsonData.authenticationMethod || 'dsn'}
-                            backspaceRemovesValue
-                        />
-                    </InlineField>
+                    <ConfigSelectField
+                        label="Authentication Method"
+                        tooltip="PAT (Personal Access Token), M2M (Machine to Machine) OAuth, OAuth 2.0 Client Credentials (not Databricks M2M) Authentication or Azure Entra Pass Thru (only work if Entra Auth is setup and user is signed in via Entra)"
+                        value={jsonData.authenticationMethod || 'dsn'}
+                        options={[
+                            {
+                                value: 'dsn',
+                                label: 'PAT',
+                            },
+                            {
+                                value: 'm2m',
+                                label: 'M2M Oauth',
+                            },
+                            {
+                                value: 'oauth2_client_credentials',
+                                label: 'OAuth2 Client Credentials',
+                            },
+                            {
+                                value: 'oauth2_pass_through',
+                                label: 'OAuth2 pass-through',
+                            },
+                        ]}
+                        onChange={(value: string) => this.onSelectValueChange(value, 'authenticationMethod')}
+                    />
                     {jsonData.authenticationMethod === 'oauth2_client_credentials' && (
                         <>
-                            <InlineField label="OAuth2 Token Endpoint" labelWidth={30} tooltip="HTTP URL to token endpoint">
-                                <Input
-                                    value={jsonData.externalCredentialsUrl || ''}
-                                    placeholder="http://localhost:2020"
-                                    width={40}
-                                    onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'externalCredentialsUrl')}
-                                />
-                            </InlineField>
-                            <InlineField label="OAuth2 Scopes" labelWidth={30} tooltip="Comma separated list of scopes (optional)">
-                                <Input
-                                    value={jsonData.oauthScopes || ''}
-                                    width={40}
-                                    placeholder="api,read"
-                                    onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'oauthScopes')}
-                                />
-                            </InlineField>
+                            <ConfigInputField
+                                label="OAuth2 Token Endpoint"
+                                tooltip={"HTTP URL to token endpoint"}
+                                value={jsonData.externalCredentialsUrl || ''}
+                                placeholder="http://localhost:2020"
+                                onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'externalCredentialsUrl')}
+                            />
+                            <ConfigInputField
+                                label="OAuth2 Scopes"
+                                tooltip={"Comma separated list of scopes"}
+                                value={jsonData.oauthScopes || ''}
+                                placeholder="api,read"
+                                onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'oauthScopes')}
+                            />
                         </>
                     )}
                     {(jsonData.authenticationMethod === 'm2m' || jsonData.authenticationMethod === 'oauth2_client_credentials') ? (
                         <>
-                            <InlineField label="Client ID" labelWidth={30}
-                                         tooltip="Databricks Service Principal Client ID">
-                                <Input
-                                    value={jsonData.clientId || ''}
-                                    placeholder=""
-                                    width={40}
-                                    onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'clientId')}
-                                />
-                            </InlineField>
-                            <InlineField label="Client Secret" labelWidth={30}
-                                         tooltip="Databricks Service Principal Client Secret">
-                                <SecretInput
-                                    isConfigured={(secureJsonFields && secureJsonFields.clientSecret) as boolean}
-                                    value={secureJsonData.clientSecret || ''}
-                                    width={40}
-                                    placeholder=""
-                                    onReset={() => this.onResetSecretField('clientSecret')}
-                                    onChange={(event: ChangeEvent<HTMLInputElement>) => this.onSecureValueChange(event, 'clientSecret')}
-                                />
-                            </InlineField>
+                            <ConfigInputField
+                                label="Client ID"
+                                tooltip="Databricks OAuth Client ID"
+                                value={jsonData.clientId || ''}
+                                placeholder=""
+                                onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'clientId')}
+                            />
+                            <ConfigSecretInputField
+                                label="Client Secret"
+                                tooltip="Databricks Service Principal Client Secret"
+                                isConfigured={(secureJsonFields && secureJsonFields.clientSecret) as boolean}
+                                value={secureJsonData.clientSecret || ''}
+                                placeholder=""
+                                onReset={() => this.onResetSecretField('clientSecret')}
+                                onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'clientSecret', true)}
+                            />
                         </>
                     ) : jsonData.authenticationMethod != 'oauth2_pass_through' && (
-                        <InlineField label="Access Token" labelWidth={30} tooltip="Databricks Personal Access Token">
-                            <SecretInput
-                                isConfigured={(secureJsonFields && secureJsonFields.token) as boolean}
-                                value={secureJsonData.token || ''}
-                                width={40}
-                                placeholder="dapi1ab2c34defabc567890123d4efa56789"
-                                onReset={() => this.onResetSecretField('token')}
-                                onChange={(event: ChangeEvent<HTMLInputElement>) => this.onSecureValueChange(event, 'token')}
-                            />
-                        </InlineField>
+                        <ConfigSecretInputField
+                            label="Access Token"
+                            tooltip="Databricks Personal Access Token"
+                            isConfigured={(secureJsonFields && secureJsonFields.token) as boolean}
+                            value={secureJsonData.token || ''}
+                            placeholder=""
+                            onReset={() => this.onResetSecretField('token')}
+                            onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'token', true)}
+                        />
                     )}
                     {jsonData.authenticationMethod === 'oauth2_pass_through' && (
                         <Alert title="OAuth2 pass-trough" severity="info">
@@ -209,137 +183,109 @@ export class ConfigEditor extends PureComponent<Props, State> {
                 <h3>Additional Settings</h3>
                 <h4 style={{margin: "0.75em 0 0.6em 0"}}>Query Settings</h4>
                 <div className="gf-form-group">
-                    <InlineField label="Min Interval (Default)" labelWidth={30}
-                                 tooltip="Min Interval default value for all queries. A lower limit for the interval. Recommended to be set to write frequency, for example '1m' if your data is written every minute.">
-                        <Input
-                            value={jsonData.timeInterval || ''}
-                            placeholder="1m"
-                            width={40}
-                            onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'timeInterval')}
-                        />
-                    </InlineField>
-                    <InlineField label="Query Format (Default)" labelWidth={30}
-                                 tooltip="Query Format selected by default when creating a new query">
-                        <Select
-                            onChange={({value}) => {
-                                this.onSelectValueChange(value, 'defaultQueryFormat');
-                            }}
-                            options={[
-                                {
-                                    value: QueryFormat.Timeseries,
-                                    label: 'Timeseries',
-                                },
-                                {
-                                    value: QueryFormat.Table,
-                                    label: 'Table',
-                                }
-                            ]}
-                            value={jsonData.defaultQueryFormat}
-                            backspaceRemovesValue
-                        />
-                    </InlineField>
-                    <InlineField label="Editor Mode (Default)" labelWidth={30}
-                                 tooltip="Editor Mode selected by default when creating a new query">
-                        <Select
-                            onChange={({value}) => {
-                                this.onSelectValueChange(value, 'defaultEditorMode');
-                            }}
-                            options={[
-                                {
-                                    value: EditorMode.Builder,
-                                    label: 'Builder',
-                                },
-                                {
-                                    value: EditorMode.Code,
-                                    label: 'Code',
-                                }
-                            ]}
-                            value={jsonData.defaultEditorMode}
-                            backspaceRemovesValue
-                        />
-                    </InlineField>
+                    <ConfigInputField
+                        label="Min Interval (Default)"
+                        tooltip="Min Interval default value for all queries. A lower limit for the interval. Recommended to be set to write frequency, for example '1m' if your data is written every minute."
+                        value={jsonData.timeInterval || ''}
+                        placeholder="1m"
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'timeInterval')}
+                    />
+                    <ConfigSelectField
+                        label="Query Format (Default)"
+                        tooltip="Query Format selected by default when creating a new query"
+                        value={jsonData.defaultQueryFormat}
+                        options={[
+                            {
+                                value: QueryFormat.Timeseries,
+                                label: 'Timeseries',
+                            },
+                            {
+                                value: QueryFormat.Table,
+                                label: 'Table',
+                            }
+                        ]}
+                        onChange={(value: string) => this.onSelectValueChange(value, 'defaultQueryFormat')}
+                    />
+                    <ConfigSelectField
+                        label="Editor Mode (Default)"
+                        tooltip="Editor Mode selected by default when creating a new query"
+                        value={jsonData.defaultEditorMode || 'builder'}
+                        options={[
+                            {
+                                value: EditorMode.Builder,
+                                label: 'Builder',
+                            },
+                            {
+                                value: EditorMode.Code,
+                                label: 'Code',
+                            }
+                        ]}
+                        onChange={(value: string) => this.onSelectValueChange(value, 'defaultEditorMode')}
+                    />
                     <h4 style={{margin: "1em 0 0.6em 0"}}>Connection Settings</h4>
-                    <InlineField label="Timeout" labelWidth={30}
-                                 tooltip="Adds timeout for the server query execution. Default is no timeout (0).">
-                        <Input
-                            value={jsonData.timeout || ''}
-                            placeholder="0"
-                            width={40}
-                            onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'timeout')}
-                        />
-                    </InlineField>
-                    <InlineField label="Retries" labelWidth={30}
-                                 tooltip="The maximum number of retries for queries.">
-                        <Input
-                            value={jsonData.retries || ''}
-                            placeholder="4"
-                            width={40}
-                            onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'retries')}
-                        />
-                    </InlineField>
-                    <InlineField label="Retry Backoff" labelWidth={30}
-                                 tooltip="The backoff duration between retries in seconds.">
-                        <Input
-                            value={jsonData.retryBackoff || ''}
-                            placeholder="1"
-                            width={40}
-                            onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'retryBackoff')}
-                        />
-                    </InlineField>
-                    <InlineField label="Max Retry Duration" labelWidth={30}
-                                 tooltip="The retry timeout in seconds">
-                        <Input
-                            value={jsonData.maxRetryDuration || ''}
-                            placeholder="30"
-                            width={40}
-                            onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'maxRetryDuration')}
-                        />
-                    </InlineField>
-                    <InlineField label="Max Rows" labelWidth={30}
-                                 tooltip="The maximum number of rows to be returned per query">
-                        <Input
-                            value={jsonData.maxRows || ''}
-                            placeholder="10000"
-                            width={40}
-                            onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'maxRows')}
-                        />
-                    </InlineField>
-                    <InlineField label="Max Open Connections" labelWidth={30}
-                                 tooltip="The maximum number of open connections to the database. (0 = unlimited)">
-                        <Input
-                            value={jsonData.maxOpenConns || ''}
-                            placeholder="0"
-                            width={40}
-                            onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'maxOpenConns')}
-                        />
-                    </InlineField>
-                    <InlineField label="Max Idle Connections" labelWidth={30}
-                                 tooltip="The maximum number of idle connections to the database. (0 = no idle connections are retained)">
-                        <Input
-                            value={jsonData.maxIdleConns || ''}
-                            placeholder="2"
-                            width={40}
-                            onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'maxIdleConns')}
-                        />
-                    </InlineField>
-                    <InlineField label="Max Connection Idle Time" labelWidth={30}
-                                 tooltip="The maximum amount of time in seconds a connection may be idle before being closed. If set to 0, connections can be idle forever.">
-                        <Input
-                            value={jsonData.connMaxIdleTime || ''}
-                            placeholder="21600"
-                            width={40}
-                            onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'connMaxIdleTime')}
-                        />
-                    </InlineField>
-                    <InlineField label="Max Connection Lifetime" labelWidth={30}
-                                 tooltip="The maximum amount of time in seconds a connection may be reused. If set to 0, connections are reused forever.">
-                        <Input
-                            value={jsonData.connMaxLifetime || ''}
-                            placeholder="21600"
-                            width={40}
-                            onChange={(event: ChangeEvent<HTMLInputElement>) => this.onValueChange(event, 'connMaxLifetime')}
-                        />
-                    </InlineField>
+                    <ConfigInputField
+                        label="Timeout"
+                        tooltip="Adds timeout for the server query execution. Default is no timeout (0)."
+                        value={jsonData.timeout || ''}
+                        placeholder="0"
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'timeout')}
+                    />
+                    <ConfigInputField
+                        label="Retries"
+                        tooltip="The maximum number of retries for queries."
+                        value={jsonData.retries || ''}
+                        placeholder="4"
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'retries')}
+                    />
+                    <ConfigInputField
+                        label="Retry Backoff"
+                        tooltip="The backoff duration between retries in seconds."
+                        value={jsonData.retryBackoff || ''}
+                        placeholder="1"
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'retryBackoff')}
+                    />
+                    <ConfigInputField
+                        label="Max Retry Duration"
+                        tooltip="The retry timeout in seconds"
+                        value={jsonData.maxRetryDuration || ''}
+                        placeholder="30"
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'maxRetryDuration')}
+                    />
+                    <ConfigInputField
+                        label="Max Rows"
+                        tooltip="The maximum number of rows to be returned per query"
+                        value={jsonData.maxRows || ''}
+                        placeholder="10000"
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'maxRows')}
+                    />
+                    <ConfigInputField
+                        label="Max Open Connections"
+                        tooltip="The maximum number of open connections to the database. (0 = unlimited)"
+                        value={jsonData.maxOpenConns || ''}
+                        placeholder="0"
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'maxOpenConns')}
+                    />
+                    <ConfigInputField
+                        label="Max Idle Connections"
+                        tooltip="The maximum number of idle connections to the database. (0 = no idle connections are retained)"
+                        value={jsonData.maxIdleConns || ''}
+                        placeholder="2"
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'maxIdleConns')}
+                    />
+                    <ConfigInputField
+                        label="Max Connection Idle Time"
+                        tooltip="The maximum amount of time in seconds a connection may be idle before being closed. If set to 0, connections can be idle forever."
+                        value={jsonData.connMaxIdleTime || ''}
+                        placeholder="21600"
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'connMaxIdleTime')}
+                    />
+                    <ConfigInputField
+                        label="Max Connection Lifetime"
+                        tooltip="The maximum amount of time in seconds a connection may be reused. If set to 0, connections are reused forever."
+                        value={jsonData.connMaxLifetime || ''}
+                        placeholder="21600"
+                        onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'connMaxLifetime')}
+                    />
                 </div>
             </>
         );

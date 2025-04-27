@@ -70,6 +70,15 @@ type ConnectionSettings struct {
 	MaxRows          int
 }
 
+// validateField checks if a field is empty and returns an error if it is.
+func validateConnectionSetting(field, fieldName string) error {
+	if field == "" {
+		log.DefaultLogger.Info(fmt.Sprintf("Connection settings missing required field %s", fieldName), "err", nil)
+		return fmt.Errorf("connection settings missing required field %s", strings.ToLower(fieldName))
+	}
+	return nil
+}
+
 // NewSampleDatasource creates a new datasource instance.
 func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
 	datasourceSettings := new(DatasourceSettings)
@@ -90,34 +99,59 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 		port = portInt
 	}
 
-	if datasourceSettings.AuthenticationMethod == "m2m" || datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" || datasourceSettings.AuthenticationMethod == "azure_entra_pass_thru" || datasourceSettings.AuthenticationMethod == "oauth2_pass_through" {
+	if err := validateConnectionSetting(datasourceSettings.Hostname, "Hostname"); err != nil {
+		return nil, err
+	}
+
+	if err := validateConnectionSetting(datasourceSettings.Path, "Path"); err != nil {
+		return nil, err
+	}
+
+	switch datasourceSettings.AuthenticationMethod {
+	case "m2m", "oauth2_client_credentials", "azure_entra_pass_thru", "oauth2_pass_through":
 		var authenticator auth.Authenticator
 		var tokenStorage *integrations.TokenStorage
 
-		if datasourceSettings.AuthenticationMethod == "oauth2_client_credentials" {
-			if datasourceSettings.ExternalCredentialsUrl == "" {
-				log.DefaultLogger.Info("Authentication Method missing Credentials Url", "err", nil)
-				return nil, fmt.Errorf("authentication Method missing Credentials Url")
+		switch datasourceSettings.AuthenticationMethod {
+		case "oauth2_client_credentials":
+
+			if err := validateConnectionSetting(datasourceSettings.ExternalCredentialsUrl, "OAuth Credentials URL"); err != nil {
+				return nil, err
 			}
+
+			if err := validateConnectionSetting(datasourceSettings.ClientId, "Client Id"); err != nil {
+				return nil, err
+			}
+
+			if err := validateConnectionSetting(settings.DecryptedSecureJSONData["clientSecret"], "Client Secret"); err != nil {
+				return nil, err
+			}
+
 			authenticator = integrations.NewOauth2ClientCredentials(
 				datasourceSettings.ClientId,
 				settings.DecryptedSecureJSONData["clientSecret"],
 				datasourceSettings.ExternalCredentialsUrl,
 				strings.Split(datasourceSettings.OAuthScopes, ","),
 			)
-		} else if datasourceSettings.AuthenticationMethod == "m2m" {
+		case "m2m":
+			if err := validateConnectionSetting(datasourceSettings.ClientId, "Client Id"); err != nil {
+				return nil, err
+			}
+			if err := validateConnectionSetting(settings.DecryptedSecureJSONData["clientSecret"], "Client Secret"); err != nil {
+				return nil, err
+			}
 			authenticator = m2m.NewAuthenticatorWithScopes(
 				datasourceSettings.ClientId,
 				settings.DecryptedSecureJSONData["clientSecret"],
 				datasourceSettings.Hostname,
 				[]string{},
 			)
-		} else if datasourceSettings.AuthenticationMethod == "azure_entra_pass_thru" || datasourceSettings.AuthenticationMethod == "oauth2_pass_through" {
+		case "oauth2_pass_through", "azure_entra_pass_thru":
 			tokenStorage = integrations.NewTokenStorage("")
 			authenticator = integrations.NewOAuthPassThroughAuthenticator(tokenStorage)
-		} else {
-			log.DefaultLogger.Info("Authentication Method Parse Error", "err", nil)
-			return nil, fmt.Errorf("authentication Method Parse Error")
+		default:
+			log.DefaultLogger.Info("unknown authentication method", "err", nil)
+			return nil, fmt.Errorf("unknown authentication method: %s", datasourceSettings.AuthenticationMethod)
 		}
 
 		connector, err := dbsql.NewConnector(
@@ -132,22 +166,21 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 		if err != nil {
 			log.DefaultLogger.Info("Connector Error", "err", err)
 			return nil, err
-		} else {
-			log.DefaultLogger.Info("Init Databricks SQL DB")
-			databricksDB := sql.OpenDB(connector)
-
-			SetDatasourceSettings(databricksDB, connectionSettings)
-			log.DefaultLogger.Info("Store Databricks SQL DB Connection")
-			return &Datasource{
-				connector:          connector,
-				databricksDB:       databricksDB,
-				connectionSettings: connectionSettings,
-				tokenStorage:       tokenStorage,
-				authMethod:         datasourceSettings.AuthenticationMethod,
-			}, nil
 		}
-	} else if datasourceSettings.AuthenticationMethod == "dsn" || datasourceSettings.AuthenticationMethod == "" {
 
+		log.DefaultLogger.Info("Init Databricks SQL DB")
+		databricksDB := sql.OpenDB(connector)
+
+		SetDatasourceSettings(databricksDB, connectionSettings)
+		log.DefaultLogger.Info("Store Databricks SQL DB Connection")
+		return &Datasource{
+			connector:          connector,
+			databricksDB:       databricksDB,
+			connectionSettings: connectionSettings,
+			tokenStorage:       tokenStorage,
+			authMethod:         datasourceSettings.AuthenticationMethod,
+		}, nil
+	case "dsn", "":
 		connector, err := dbsql.NewConnector(
 			dbsql.WithAccessToken(settings.DecryptedSecureJSONData["token"]),
 			dbsql.WithServerHostname(datasourceSettings.Hostname),
@@ -177,12 +210,26 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 			connectionSettings: connectionSettings,
 			authMethod:         datasourceSettings.AuthenticationMethod,
 		}, nil
-
 	}
 
-	return nil, fmt.Errorf("Invalid Connection Method")
+	log.DefaultLogger.Info("Invalid Authentication Method", "err", nil)
+	return nil, fmt.Errorf("invalid authentication method: %s", datasourceSettings.AuthenticationMethod)
 }
 
+// parseInt is a helper function to parse an integer from a string
+func parseInt(value string, defaultValue int) int {
+	if value == "" {
+		return defaultValue
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		log.DefaultLogger.Warn("Failed to parse integer", "value", value, "error", err)
+		return defaultValue
+	}
+	return parsed
+}
+
+// parseConnectionSettings is a helper function to parse the connection settings from the JSON data
 func parseConnectionSettings(settingsRawJson json.RawMessage) ConnectionSettings {
 	connectionSettings := ConnectionSettings{
 		MaxOpenConns:     0,
@@ -203,44 +250,15 @@ func parseConnectionSettings(settingsRawJson json.RawMessage) ConnectionSettings
 		return connectionSettings
 	}
 
-	if connectionSettingsJson.MaxOpenConns != "" {
-		maxOpenConn, err := strconv.Atoi(connectionSettingsJson.MaxOpenConns)
-		if err != nil {
-			log.DefaultLogger.Info("MaxOpenConns Parse Error", "err", err)
-		} else {
-			connectionSettings.MaxOpenConns = maxOpenConn
-		}
-	}
+	connectionSettings.MaxOpenConns = parseInt(connectionSettingsJson.MaxOpenConns, 0)
+	connectionSettings.MaxIdleConns = parseInt(connectionSettingsJson.MaxIdleConns, 2)
+	connectionSettings.ConnMaxLifetime = time.Duration(parseInt(connectionSettingsJson.ConnMaxLifetime, 6*3600)) * time.Second
+	connectionSettings.ConnMaxIdleTime = time.Duration(parseInt(connectionSettingsJson.ConnMaxIdleTime, 6*3600)) * time.Second
 
-	if connectionSettingsJson.MaxIdleConns != "" {
-		maxIdleConn, err := strconv.Atoi(connectionSettingsJson.MaxIdleConns)
-		if err != nil {
-			log.DefaultLogger.Info("MaxIdleConns Parse Error", "err", err)
-		} else {
-			connectionSettings.MaxIdleConns = maxIdleConn
-		}
-	}
-
-	if connectionSettingsJson.ConnMaxLifetime != "" {
-		connMaxLifetime, err := strconv.Atoi(connectionSettingsJson.ConnMaxLifetime)
-		if err != nil {
-			log.DefaultLogger.Info("ConnMaxLifetime Parse Error", "err", err)
-		} else {
-			connectionSettings.ConnMaxLifetime = time.Duration(connMaxLifetime) * time.Second
-		}
-	}
-
-	if connectionSettingsJson.ConnMaxIdleTime != "" {
-		connMaxIdleTime, err := strconv.Atoi(connectionSettingsJson.ConnMaxIdleTime)
-		if err != nil {
-			log.DefaultLogger.Info("ConnMaxIdleTime Parse Error", "err", err)
-		} else {
-			connectionSettings.ConnMaxIdleTime = time.Duration(connMaxIdleTime) * time.Second
-		}
-	}
 	return connectionSettings
 }
 
+// SetDatasourceSettings is a helper function to set the connection settings for the DB
 func SetDatasourceSettings(db *sql.DB, connectionSettings ConnectionSettings) {
 	db.SetConnMaxIdleTime(connectionSettings.ConnMaxIdleTime)
 	db.SetConnMaxLifetime(connectionSettings.ConnMaxLifetime)
@@ -248,6 +266,7 @@ func SetDatasourceSettings(db *sql.DB, connectionSettings ConnectionSettings) {
 	db.SetMaxOpenConns(connectionSettings.MaxOpenConns)
 }
 
+// RefreshDBConnection is a helper function which initializes a new DB connection
 func (d *Datasource) RefreshDBConnection() error {
 	d.databricksDB = sql.OpenDB(d.connector)
 
@@ -303,6 +322,7 @@ type Datasource struct {
 	tokenStorage       *integrations.TokenStorage
 }
 
+// CallResource handles resource calls sent from Grafana to the plugin.
 func (d *Datasource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
 	err := d.CheckOAuthPassTrough(req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
 	if err != nil {
@@ -317,6 +337,12 @@ func (d *Datasource) CallResource(ctx context.Context, req *backend.CallResource
 // be disposed and a new one will be created using NewSampleDatasource factory function.
 func (d *Datasource) Dispose() {
 	// Clean up datasource instance resources.
+	if d.databricksDB != nil {
+		err := d.databricksDB.Close()
+		if err != nil {
+			log.DefaultLogger.Error("Error closing DB connection", "err", err)
+		}
+	}
 }
 
 // QueryData handles multiple queries and returns multiple responses.
@@ -358,13 +384,14 @@ type queryModel struct {
 	QuerySettings querySettings `json:"querySettings"`
 }
 
+// query executes a query and returns the response.
 func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, query backend.DataQuery) backend.DataResponse {
 	response := backend.DataResponse{}
 
 	// Unmarshal the JSON into our queryModel.
 	var qm queryModel
 
-	log.DefaultLogger.Info("Query Ful", "query", query)
+	log.DefaultLogger.Info("Query Full", "query", query)
 	err := json.Unmarshal(query.JSON, &qm)
 	if err != nil {
 		response.Error = err
@@ -373,6 +400,13 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 	}
 
 	queryString := replaceMacros(qm.RawSql, query)
+
+	// Check if the query string is empty
+	if strings.TrimSpace(queryString) == "" {
+		response.Error = fmt.Errorf("query string is empty")
+		log.DefaultLogger.Info("Query String Empty", "err", response.Error)
+		return response
+	}
 
 	// Check if multiple statements are present in the query
 	// If so, split them and execute them individually
@@ -433,6 +467,7 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 	return response
 }
 
+// CheckOAuthPassTrough checks and updates the OAuth token passed through from Grafana incase oauth2_pass_through authentication is used.
 func (d *Datasource) CheckOAuthPassTrough(token string) error {
 
 	if d.authMethod != "azure_entra_pass_thru" && d.authMethod != "oauth2_pass_through" {
@@ -440,11 +475,11 @@ func (d *Datasource) CheckOAuthPassTrough(token string) error {
 	}
 
 	if token == "" {
-		log.DefaultLogger.Info("Token is empty")
+		log.DefaultLogger.Info("No OAuth Token passed through")
 		return fmt.Errorf("No OAuth Token passed through")
 	}
 	if token != d.tokenStorage.Get() {
-		log.DefaultLogger.Info("Token updated")
+		log.DefaultLogger.Info("OAuth Token changed")
 		d.tokenStorage.Update(token)
 	}
 
