@@ -1,6 +1,29 @@
 # Changelog
 
-## 1.3.4
+## 1.3.7
+
+- Refactor: Rename Azure entra pass-through Auth Methof to OAuth pass-through
+- Bugfix: CallResource OAuthtoken pass-through
+
+---
+
+### 1.3.6
+
+- Feature: Add Azure Entra Pass Thru Authentication
+- Refactor: Remove custom date type converter
+
+---
+
+### 1.3.5
+
+- Bugfix: Remove context deadline from oauth2 tokenSource
+- Documentation: Increase min grafana 7 version for v1.1.7 build in readme
+- Documentation: Add docsify documentation
+- Chore: Update go dependencies
+
+---
+
+### 1.3.4
 
 - Feature: Add OAuth Scopes Configuration
 
