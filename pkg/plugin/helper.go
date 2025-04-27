@@ -26,6 +26,18 @@ type defaultsResponseBody struct {
 	DefaultSchema  string `json:"defaultSchema"`
 }
 
+func sendJSONResponse(sender backend.CallResourceResponseSender, status int, data interface{}) error {
+	jsonBody, err := json.Marshal(data)
+	if err != nil {
+		log.DefaultLogger.Error("CallResource Error, JSON marshaling failed", "err", err)
+		return err
+	}
+	return sender.Send(&backend.CallResourceResponse{
+		Status: status,
+		Body:   jsonBody,
+	})
+}
+
 func autocompletionQueries(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender, d *Datasource) error {
 	path := req.Path
 	log.DefaultLogger.Info("CallResource called", "path", path)
@@ -58,15 +70,11 @@ func autocompletionQueries(ctx context.Context, req *backend.CallResourceRequest
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
 		}
-		jsonBody, err := json.Marshal(catalogs)
+		err = sendJSONResponse(sender, 200, catalogs)
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
-			return err
 		}
-		err = sender.Send(&backend.CallResourceResponse{
-			Status: 200,
-			Body:   jsonBody,
-		})
+
 		return err
 	case "schemas":
 		queryString := "SHOW SCHEMAS"
@@ -96,15 +104,11 @@ func autocompletionQueries(ctx context.Context, req *backend.CallResourceRequest
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
 		}
-		jsonBody, err := json.Marshal(schemas)
+		err = sendJSONResponse(sender, 200, schemas)
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
 		}
-		err = sender.Send(&backend.CallResourceResponse{
-			Status: 200,
-			Body:   jsonBody,
-		})
 		return err
 	case "tables":
 		queryString := "SHOW TABLES"
@@ -138,15 +142,11 @@ func autocompletionQueries(ctx context.Context, req *backend.CallResourceRequest
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
 		}
-		jsonBody, err := json.Marshal(tables)
+		err = sendJSONResponse(sender, 200, tables)
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
 		}
-		err = sender.Send(&backend.CallResourceResponse{
-			Status: 200,
-			Body:   jsonBody,
-		})
 		return err
 	case "columns":
 		queryString := fmt.Sprintf("DESCRIBE TABLE %s", body.Table)
@@ -178,15 +178,11 @@ func autocompletionQueries(ctx context.Context, req *backend.CallResourceRequest
 			return err
 		}
 
-		jsonBody, err := json.Marshal(columnsResponse)
+		err = sendJSONResponse(sender, 200, columnsResponse)
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
 		}
-		err = sender.Send(&backend.CallResourceResponse{
-			Status: 200,
-			Body:   jsonBody,
-		})
 		return err
 	case "defaults":
 		queryString := "SELECT current_catalog(), current_schema();"
@@ -214,15 +210,11 @@ func autocompletionQueries(ctx context.Context, req *backend.CallResourceRequest
 			DefaultSchema:  currentSchema.String,
 		}
 
-		jsonBody, err := json.Marshal(defaultsResponse)
+		err = sendJSONResponse(sender, 200, defaultsResponse)
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
 		}
-		err = sender.Send(&backend.CallResourceResponse{
-			Status: 200,
-			Body:   jsonBody,
-		})
 		return err
 	default:
 		log.DefaultLogger.Error("CallResource Error", "err", "Unknown URL")

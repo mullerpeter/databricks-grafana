@@ -22,6 +22,9 @@ func (ts *TokenStorage) Get() string {
 }
 
 func (ts *TokenStorage) Update(newToken string) {
+	if newToken == "" {
+		return
+	}
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	ts.token = newToken
@@ -37,7 +40,7 @@ func NewOAuthPassThroughAuthenticator(ts *TokenStorage) *OAuthPassThroughAuthent
 
 func (a *OAuthPassThroughAuthenticator) Authenticate(r *http.Request) error {
 	if a.tokenStorage.Get() == "" {
-		return fmt.Errorf("Empty Token Pass Trough")
+		return fmt.Errorf("OAuth pass-through token is empty")
 	}
 	r.Header.Set("Authorization", a.tokenStorage.Get())
 	return nil

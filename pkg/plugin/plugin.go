@@ -180,7 +180,7 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 
 	}
 
-	return nil, fmt.Errorf("Invalid Connection Method")
+	return nil, fmt.Errorf("invalid authentication method: %s", datasourceSettings.AuthenticationMethod)
 }
 
 func parseConnectionSettings(settingsRawJson json.RawMessage) ConnectionSettings {
@@ -317,6 +317,12 @@ func (d *Datasource) CallResource(ctx context.Context, req *backend.CallResource
 // be disposed and a new one will be created using NewSampleDatasource factory function.
 func (d *Datasource) Dispose() {
 	// Clean up datasource instance resources.
+	if d.databricksDB != nil {
+		err := d.databricksDB.Close()
+		if err != nil {
+			log.DefaultLogger.Error("Error closing DB connection", "err", err)
+		}
+	}
 }
 
 // QueryData handles multiple queries and returns multiple responses.

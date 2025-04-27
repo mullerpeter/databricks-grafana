@@ -22,26 +22,17 @@ type oauth2ClientCredentials struct {
 func (c *oauth2ClientCredentials) Authenticate(r *http.Request) error {
 	c.mx.Lock()
 	defer c.mx.Unlock()
-	if c.tokenSource != nil {
-		token, err := c.tokenSource.Token()
-		if err != nil {
-			log.DefaultLogger.Error("token fetching failed", "err", err)
-			return err
+
+	if c.tokenSource == nil {
+		config := clientcredentials.Config{
+			ClientID:     c.clientID,
+			ClientSecret: c.clientSecret,
+			TokenURL:     c.tokenUrl,
+			Scopes:       c.scopes,
 		}
-		token.SetAuthHeader(r)
-		return nil
+		c.tokenSource = config.TokenSource(context.Background())
 	}
 
-	config := clientcredentials.Config{
-		ClientID:     c.clientID,
-		ClientSecret: c.clientSecret,
-		TokenURL:     c.tokenUrl,
-		Scopes:       c.scopes,
-	}
-
-	c.tokenSource = config.TokenSource(context.Background())
-
-	log.DefaultLogger.Debug("token fetching started")
 	token, err := c.tokenSource.Token()
 
 	if err != nil {
