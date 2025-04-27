@@ -110,7 +110,6 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 	switch datasourceSettings.AuthenticationMethod {
 	case "m2m", "oauth2_client_credentials", "azure_entra_pass_thru", "oauth2_pass_through":
 		var authenticator auth.Authenticator
-		var tokenStorage *integrations.TokenStorage
 
 		switch datasourceSettings.AuthenticationMethod {
 		case "oauth2_client_credentials":
@@ -147,8 +146,7 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 				[]string{},
 			)
 		case "oauth2_pass_through", "azure_entra_pass_thru":
-			tokenStorage = integrations.NewTokenStorage("")
-			authenticator = integrations.NewOAuthPassThroughAuthenticator(tokenStorage)
+			authenticator = integrations.NewOAuthPassThroughAuthenticator()
 		default:
 			log.DefaultLogger.Info("unknown authentication method", "err", nil)
 			return nil, fmt.Errorf("unknown authentication method: %s", datasourceSettings.AuthenticationMethod)
@@ -177,7 +175,6 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 			connector:          connector,
 			databricksDB:       databricksDB,
 			connectionSettings: connectionSettings,
-			tokenStorage:       tokenStorage,
 			authMethod:         datasourceSettings.AuthenticationMethod,
 		}, nil
 	case "dsn", "":
@@ -319,16 +316,11 @@ type Datasource struct {
 	databricksDB       *sql.DB
 	connectionSettings ConnectionSettings
 	authMethod         string
-	tokenStorage       *integrations.TokenStorage
 }
 
 // CallResource handles resource calls sent from Grafana to the plugin.
 func (d *Datasource) CallResource(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender) error {
-	err := d.CheckOAuthPassTrough(req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
-	if err != nil {
-		log.DefaultLogger.Error("OAuth2 Pass Through Authentication failed", "err", err)
-		return err
-	}
+	ctx = AddPassTroughTokenToContext(ctx, req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
 	return autocompletionQueries(ctx, req, sender, d)
 }
 
@@ -352,11 +344,7 @@ func (d *Datasource) Dispose() {
 func (d *Datasource) QueryData(ctx context.Context, req *backend.QueryDataRequest) (*backend.QueryDataResponse, error) {
 	log.DefaultLogger.Info("QueryData called", "request", req)
 
-	err := d.CheckOAuthPassTrough(req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
-	if err != nil {
-		log.DefaultLogger.Error("OAuth2 Pass Through Authentication failed", "err", err)
-		return nil, err
-	}
+	ctx = AddPassTroughTokenToContext(ctx, req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
 
 	// create response struct
 	response := backend.NewQueryDataResponse()
@@ -467,23 +455,9 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 	return response
 }
 
-// CheckOAuthPassTrough checks and updates the OAuth token passed through from Grafana incase oauth2_pass_through authentication is used.
-func (d *Datasource) CheckOAuthPassTrough(token string) error {
-
-	if d.authMethod != "azure_entra_pass_thru" && d.authMethod != "oauth2_pass_through" {
-		return nil
-	}
-
-	if token == "" {
-		log.DefaultLogger.Info("No OAuth Token passed through")
-		return fmt.Errorf("No OAuth Token passed through")
-	}
-	if token != d.tokenStorage.Get() {
-		log.DefaultLogger.Info("OAuth Token changed")
-		d.tokenStorage.Update(token)
-	}
-
-	return nil
+// AddPassTroughTokenToContext adds the pass through token to the context
+func AddPassTroughTokenToContext(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, "pass_through_oauth_token", token)
 }
 
 // CheckHealth handles health checks sent from Grafana to the plugin.
@@ -492,14 +466,7 @@ func (d *Datasource) CheckOAuthPassTrough(token string) error {
 // a datasource is working as expected.
 func (d *Datasource) CheckHealth(ctx context.Context, req *backend.CheckHealthRequest) (*backend.CheckHealthResult, error) {
 	log.DefaultLogger.Info("CheckHealth called", "request", req)
-
-	err := d.CheckOAuthPassTrough(req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
-	if err != nil {
-		return &backend.CheckHealthResult{
-			Status:  backend.HealthStatusError,
-			Message: fmt.Sprintf("OAuth2 Pass Through Authentication failed: %s", err),
-		}, nil
-	}
+	ctx = AddPassTroughTokenToContext(ctx, req.GetHTTPHeader(backend.OAuthIdentityTokenHeaderName))
 
 	rows, err := d.QueryContext(ctx, "SELECT 1")
 
