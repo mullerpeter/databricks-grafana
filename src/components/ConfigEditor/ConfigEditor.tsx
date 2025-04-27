@@ -1,47 +1,16 @@
 import React, {ChangeEvent, PureComponent} from 'react';
-import {InlineField, Input, SecretInput, Select, Alert} from '@grafana/ui';
+import {Alert} from '@grafana/ui';
 import {DataSourcePluginOptionsEditorProps} from '@grafana/data';
 import {DatabricksDataSourceOptions, DatabricksSecureJsonData} from '../../types';
 import {EditorMode} from "@grafana/experimental";
 import {QueryFormat} from "../grafana-sql/src";
+import {ConfigInputField, ConfigSelectField, ConfigSecretInputField} from "./ConfigFields";
 
 interface Props extends DataSourcePluginOptionsEditorProps<DatabricksDataSourceOptions> {
 }
 
 interface State {
 }
-
-const ConfigInputField = ({ label, tooltip, value, placeholder, onChange }: any) => (
-    <InlineField label={label} labelWidth={30} tooltip={tooltip}>
-        <Input value={value} placeholder={placeholder} width={40} onChange={onChange} />
-    </InlineField>
-);
-
-const ConfigSelectField = ({ label, tooltip, value, options, onChange }: any) => (
-    <InlineField label={label} labelWidth={30} tooltip={tooltip}>
-        <Select
-            onChange={({value}) => {
-                onChange(value);
-            }}
-            options={options}
-            value={value}
-            backspaceRemovesValue
-        />
-    </InlineField>
-);
-
-const ConfigSecretInputField = ({ label, tooltip, value, placeholder, isConfigured, onReset, onChange }: any) => (
-    <InlineField label={label} labelWidth={30} tooltip={tooltip}>
-        <SecretInput
-            isConfigured={isConfigured}
-            value={value}
-            placeholder={placeholder}
-            width={40}
-            onReset={onReset}
-            onChange={onChange}
-        />
-    </InlineField>
-);
 
 export class ConfigEditor extends PureComponent<Props, State> {
 
@@ -80,7 +49,7 @@ export class ConfigEditor extends PureComponent<Props, State> {
     }
 
     handleValueChange = (event: ChangeEvent<HTMLInputElement>, key: string, isSecure: boolean = false) => {
-        const { onOptionsChange, options } = this.props;
+        const {onOptionsChange, options} = this.props;
         const updatedOptions = isSecure
             ? {
                 ...options,

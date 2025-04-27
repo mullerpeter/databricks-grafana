@@ -38,6 +38,24 @@ func sendJSONResponse(sender backend.CallResourceResponseSender, status int, dat
 	})
 }
 
+func executeQuery(ctx context.Context, d *Datasource, query string, scanFunc func(*sql.Rows) error) error {
+	rows, err := d.QueryContext(ctx, query)
+	if err != nil {
+		log.DefaultLogger.Error("CallResource Error", "err", err)
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		if err := scanFunc(rows); err != nil {
+			log.DefaultLogger.Error("CallResource Error", "err", err)
+			return err
+		}
+	}
+
+	return rows.Err()
+}
+
 func autocompletionQueries(ctx context.Context, req *backend.CallResourceRequest, sender backend.CallResourceResponseSender, d *Datasource) error {
 	path := req.Path
 	log.DefaultLogger.Info("CallResource called", "path", path)
@@ -49,67 +67,41 @@ func autocompletionQueries(ctx context.Context, req *backend.CallResourceRequest
 	}
 	switch path {
 	case "catalogs":
-		rows, err := d.QueryContext(ctx, "SHOW CATALOGS")
-		if err != nil {
-			log.DefaultLogger.Error("CallResource Error", "err", err)
-			return err
-		}
-		defer rows.Close()
 		catalogs := make([]string, 0)
-		for rows.Next() {
+		err = executeQuery(ctx, d, "SHOW CATALOGS", func(rows *sql.Rows) error {
 			var catalog string
-			err := rows.Scan(&catalog)
-			if err != nil {
-				log.DefaultLogger.Error("CallResource Error", "err", err)
+			if err := rows.Scan(&catalog); err != nil {
 				return err
 			}
 			catalogs = append(catalogs, catalog)
-		}
-		err = rows.Err()
+			return nil
+		})
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
 		}
-		err = sendJSONResponse(sender, 200, catalogs)
-		if err != nil {
-			log.DefaultLogger.Error("CallResource Error", "err", err)
-		}
-
-		return err
+		return sendJSONResponse(sender, 200, catalogs)
 	case "schemas":
 		queryString := "SHOW SCHEMAS"
-
 		if body.Catalog != "" {
 			queryString = fmt.Sprintf("SHOW SCHEMAS IN %s", body.Catalog)
 		}
 		log.DefaultLogger.Info("CallResource called", "queryString", queryString)
-		rows, err := d.QueryContext(ctx, queryString)
-		if err != nil {
-			log.DefaultLogger.Error("CallResource Error", "err", err)
-			return err
-		}
-		defer rows.Close()
+
 		schemas := make([]string, 0)
-		for rows.Next() {
+		err = executeQuery(ctx, d, queryString, func(rows *sql.Rows) error {
 			var schema string
-			err := rows.Scan(&schema)
-			if err != nil {
-				log.DefaultLogger.Error("CallResource Error", "err", err)
+			if err := rows.Scan(&schema); err != nil {
 				return err
 			}
 			schemas = append(schemas, schema)
-		}
-		err = rows.Err()
+			return nil
+		})
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
 		}
-		err = sendJSONResponse(sender, 200, schemas)
-		if err != nil {
-			log.DefaultLogger.Error("CallResource Error", "err", err)
-			return err
-		}
-		return err
+		return sendJSONResponse(sender, 200, schemas)
 	case "tables":
 		queryString := "SHOW TABLES"
 		if body.Schema != "" {
@@ -119,71 +111,47 @@ func autocompletionQueries(ctx context.Context, req *backend.CallResourceRequest
 			}
 		}
 		log.DefaultLogger.Info("CallResource called", "queryString", queryString)
-		rows, err := d.QueryContext(ctx, queryString)
-		if err != nil {
-			log.DefaultLogger.Error("CallResource Error", "err", err)
-			return err
-		}
-		defer rows.Close()
+
 		tables := make([]string, 0)
-		for rows.Next() {
+		err = executeQuery(ctx, d, queryString, func(rows *sql.Rows) error {
 			var database string
 			var tableName string
 			var isTemporary bool
-			err := rows.Scan(&database, &tableName, &isTemporary)
-			if err != nil {
-				log.DefaultLogger.Error("CallResource Error", "err", err)
+			if err := rows.Scan(&database, &tableName, &isTemporary); err != nil {
 				return err
 			}
 			tables = append(tables, tableName)
-		}
-		err = rows.Err()
+			return nil
+		})
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
 		}
-		err = sendJSONResponse(sender, 200, tables)
-		if err != nil {
-			log.DefaultLogger.Error("CallResource Error", "err", err)
-			return err
-		}
-		return err
+		return sendJSONResponse(sender, 200, tables)
 	case "columns":
 		queryString := fmt.Sprintf("DESCRIBE TABLE %s", body.Table)
 		log.DefaultLogger.Info("CallResource called", "queryString", queryString)
-		rows, err := d.QueryContext(ctx, queryString)
-		if err != nil {
-			log.DefaultLogger.Error("CallResource Error", "err", err)
-			return err
-		}
-		defer rows.Close()
+
 		columnsResponse := make([]columnsResponseBody, 0)
-		for rows.Next() {
+		err = executeQuery(ctx, d, queryString, func(rows *sql.Rows) error {
 			var colName sql.NullString
 			var colType sql.NullString
 			var comment sql.NullString
-			err := rows.Scan(&colName, &colType, &comment)
-			if err != nil {
-				log.DefaultLogger.Error("CallResource Error", "err", err)
+			if err := rows.Scan(&colName, &colType, &comment); err != nil {
 				return err
 			}
 			columnsResponse = append(columnsResponse, columnsResponseBody{
 				ColumnName: colName.String,
 				ColumnType: colType.String,
 			})
-		}
-		err = rows.Err()
+			return nil
+		})
 		if err != nil {
 			log.DefaultLogger.Error("CallResource Error", "err", err)
 			return err
 		}
 
-		err = sendJSONResponse(sender, 200, columnsResponse)
-		if err != nil {
-			log.DefaultLogger.Error("CallResource Error", "err", err)
-			return err
-		}
-		return err
+		return sendJSONResponse(sender, 200, columnsResponse)
 	case "defaults":
 		queryString := "SELECT current_catalog(), current_schema();"
 		log.DefaultLogger.Info("CallResource called", "queryString", queryString)
@@ -210,12 +178,7 @@ func autocompletionQueries(ctx context.Context, req *backend.CallResourceRequest
 			DefaultSchema:  currentSchema.String,
 		}
 
-		err = sendJSONResponse(sender, 200, defaultsResponse)
-		if err != nil {
-			log.DefaultLogger.Error("CallResource Error", "err", err)
-			return err
-		}
-		return err
+		return sendJSONResponse(sender, 200, defaultsResponse)
 	default:
 		log.DefaultLogger.Error("CallResource Error", "err", "Unknown URL")
 		err := sender.Send(&backend.CallResourceResponse{

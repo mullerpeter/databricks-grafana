@@ -401,6 +401,13 @@ func (d *Datasource) query(ctx context.Context, pCtx backend.PluginContext, quer
 
 	queryString := replaceMacros(qm.RawSql, query)
 
+	// Check if the query string is empty
+	if strings.TrimSpace(queryString) == "" {
+		response.Error = fmt.Errorf("query string is empty")
+		log.DefaultLogger.Info("Query String Empty", "err", response.Error)
+		return response
+	}
+
 	// Check if multiple statements are present in the query
 	// If so, split them and execute them individually
 	if strings.Contains(queryString, ";") {
