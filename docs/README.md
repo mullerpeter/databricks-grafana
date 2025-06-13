@@ -118,15 +118,15 @@ datasources:
       externalCredentialsUrl: ...
       oauthScopes: api,read
       timeInterval: 1m
-      maxOpenConns: 0
-      maxIdleConns: 0
-      connMaxLifetime: 3600
-      connMaxIdleTime: 3600
-      retries: 3
-      retryBackoff: 1
-      maxRetryDuration: 60
-      timeout: 60
-      maxRows: 10000
+      maxOpenConns: "0"
+      maxIdleConns: "0"
+      connMaxLifetime: "3600"
+      connMaxIdleTime: "3600"
+      retries: "3"
+      retryBackoff: "1"
+      maxRetryDuration: "60"
+      timeout: "60"
+      maxRows: "10000"
       defaultQueryFormat: table | time_series
       defaultEditorMode: builder | code
     secureJsonData:
