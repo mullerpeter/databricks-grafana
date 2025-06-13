@@ -111,8 +111,8 @@ datasources:
     isDefault: true
     jsonData:
       hostname: XXX.cloud.databricks.com
-      httpPath: sql/1.0/endpoints/XXX
-      port: 443
+      path: sql/1.0/endpoints/XXX
+      port: "443"
       authenticationMethod: dsn (=PAT) | m2m | oauth2_client_credentials | oauth2_pass_through
       clientId: ...
       externalCredentialsUrl: ...
