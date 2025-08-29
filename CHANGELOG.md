@@ -1,6 +1,13 @@
 # Changelog
 
-## 1.3.7
+## 1.3.8
+
+- Refactor: User context for oauth token pass-through
+- Bugfix: Allow . in macro column names & fix quotation for timeFrom and timeTo macros
+
+---
+
+### 1.3.7
 
 - Refactor: Rename Azure entra pass-through Auth Methof to OAuth pass-through
 - Bugfix: CallResource OAuthtoken pass-through
