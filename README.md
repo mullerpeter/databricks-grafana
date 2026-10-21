@@ -80,6 +80,7 @@ Available configuration fields are as follows:
 | Server Hostname        | Databricks Server Hostname (without http). i.e. `XXX.cloud.databricks.com`                                                                                                   |
 | Server Port            | Databricks Server Port (default `443`)                                                                                                                                       |
 | HTTP Path              | HTTP Path value for the existing cluster or SQL warehouse. i.e. `sql/1.0/endpoints/XXX`                                                                                      |
+| Protocol               | Thrift (default) or Statement Execution API (SEA). SEA is required for Lakehouse/RT warehouses, see [Lakehouse/RT Warehouses](#lakehousert-warehouses-statement-execution-api) |
 | Authentication Method  | PAT (Personal Access Token), M2M (Machine to Machine) OAuth, OAuth2 Client Credentials Authentication or OAuth pass-through                                                  |
 | Client ID              | Databricks Service Principal Client ID. (only if OAuth / OAuth2 is chosen as Auth Method)                                                                                    |
 | Client Secret          | Databricks Service Principal Client Secret. (only if OAuth / OAuth2 is chosen as Auth Method)                                                                                |
@@ -94,11 +95,27 @@ Available configuration fields are as follows:
 | Retries                | The number of retries to perform. (Default 4)                                                                                                                                |
 | Retry Backoff          | The time in seconds to wait between retries. (Default 1)                                                                                                                     |
 | Max Retry Duration     | The maximum time in seconds to retry a query. (Default 30)                                                                                                                   |
-| Timeout                | Adds timeout for the server query execution. Default is no timeout (0).                                                                                                      |
+| Timeout                | Adds timeout for the server query execution. Default is no timeout (0). With the SEA protocol this is applied as a client-side query timeout.                               |
 | Max Rows               | The maximum number of rows to return in a query. (Default 10'000)                                                                                                            |
 | Default Query Format   | The default format for new queries. (Table or Timer series)                                                                                                                  |
 | Default Editor Mode    | The default editor mode for new queries. (Code or Builder)                                                                                                                   |
 
+
+##### Lakehouse/RT Warehouses (Statement Execution API)
+
+Lakehouse/RT (Real-Time) SQL warehouses don't support the Thrift protocol. Connecting to one over Thrift fails with:
+
+```
+Lakehouse/RT is not supported for Thrift protocol. Please update your Databricks SQL Driver version to the latest version, which supports the Statement Execution API protocol
+```
+
+The plugin uses [databricks-sql-go](https://github.com/databricks/databricks-sql-go) v1.17.0, which can run queries over the Statement Execution API (SEA) through the Databricks SQL kernel. To use it:
+
+1. Use a plugin binary built with the `databricks_kernel` build tag (see [Backend](#backend)). Without it, connecting with SEA fails with an error asking to rebuild with `-tags databricks_kernel`.
+2. Set **Protocol** to `Statement Execution API (SEA)` (`useKernel: true` in YAML). In a kernel build, the driver also switches Lakehouse/RT connections from Thrift to SEA automatically.
+3. Use the PAT or M2M OAuth authentication method. OAuth2 Client Credentials and OAuth2 pass-through aren't supported with SEA.
+
+With SEA, `Max Rows` has no effect, because the kernel manages result fetching.
 
 ##### Configuration via YAML
 
@@ -114,6 +131,7 @@ datasources:
       path: sql/1.0/endpoints/XXX
       port: "443"
       authenticationMethod: dsn (=PAT) | m2m | oauth2_client_credentials | oauth2_pass_through
+      useKernel: false | true (=SEA, requires a databricks_kernel build)
       clientId: ...
       externalCredentialsUrl: ...
       oauthScopes: api,read
@@ -272,6 +290,15 @@ A data source backend plugin consists of both frontend and backend components.
    ```bash
    mage -l
    ```
+
+4. Build a backend binary with Statement Execution API (SEA) support, which Lakehouse/RT warehouses need. The kernel is linked through cgo, so this needs `CGO_ENABLED=1` and a C compiler, and is built natively per platform (the Mage build disables cgo and doesn't set the `databricks_kernel` tag):
+
+   ```bash
+   CGO_ENABLED=1 go build -tags "arrow_json_stdlib databricks_kernel" -ldflags "-w -s" \
+     -o dist/gpx_databricks_$(go env GOOS)_$(go env GOARCH) ./pkg
+   ```
+
+   The prebuilt kernel libraries are fetched as Go modules for the target platform, so no Rust toolchain is needed.
 
 ## Learn more
 

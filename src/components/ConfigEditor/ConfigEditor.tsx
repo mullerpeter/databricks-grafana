@@ -48,6 +48,17 @@ export class ConfigEditor extends PureComponent<Props, State> {
         });
     }
 
+    onUseKernelChange = (useKernel: boolean) => {
+        const {onOptionsChange, options} = this.props;
+        onOptionsChange({
+            ...options,
+            jsonData: {
+                ...options.jsonData,
+                useKernel: useKernel,
+            },
+        });
+    }
+
     handleValueChange = (event: ChangeEvent<HTMLInputElement>, key: string, isSecure: boolean = false) => {
         const {onOptionsChange, options} = this.props;
         const updatedOptions = isSecure
@@ -97,6 +108,22 @@ export class ConfigEditor extends PureComponent<Props, State> {
                         value={jsonData.path || ''}
                         placeholder="sql/1.0/endpoints/XXX"
                         onChange={(event: ChangeEvent<HTMLInputElement>) => this.handleValueChange(event, 'path')}
+                    />
+                    <ConfigSelectField
+                        label="Protocol"
+                        tooltip="Thrift (default) or Statement Execution API (SEA). Lakehouse/RT warehouses require SEA, which needs a plugin build with the databricks_kernel tag and PAT or M2M OAuth authentication."
+                        value={jsonData.useKernel ? 'sea' : 'thrift'}
+                        options={[
+                            {
+                                value: 'thrift',
+                                label: 'Thrift',
+                            },
+                            {
+                                value: 'sea',
+                                label: 'Statement Execution API (SEA)',
+                            },
+                        ]}
+                        onChange={(value: string) => this.onUseKernelChange(value === 'sea')}
                     />
                     <h4 style={{margin: "1em 0 0.6em 0"}}>Authentication</h4>
                     <ConfigSelectField
