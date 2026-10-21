@@ -44,6 +44,20 @@ type DatasourceSettings struct {
 	ClientId               string `json:"clientId"`
 	ExternalCredentialsUrl string `json:"externalCredentialsUrl"`
 	OAuthScopes            string `json:"oauthScopes"`
+	UseKernel              bool   `json:"useKernel"`
+}
+
+// backendOptions selects the SEA-via-kernel backend when useKernel is set, otherwise Thrift.
+// The kernel backend rejects WithTimeout, so it bounds queries with WithClientQueryTimeout instead.
+func backendOptions(useKernel bool, timeout time.Duration) []dbsql.ConnOption {
+	if !useKernel {
+		return []dbsql.ConnOption{dbsql.WithTimeout(timeout)}
+	}
+	opts := []dbsql.ConnOption{dbsql.WithUseKernel(true)}
+	if timeout > 0 {
+		opts = append(opts, dbsql.WithClientQueryTimeout(timeout))
+	}
+	return opts
 }
 
 type ConnectionSettingsRawJson struct {
@@ -152,15 +166,20 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 			return nil, fmt.Errorf("unknown authentication method: %s", datasourceSettings.AuthenticationMethod)
 		}
 
-		connector, err := dbsql.NewConnector(
+		// The kernel backend only accepts the driver's built-in M2M authenticator.
+		if datasourceSettings.UseKernel && datasourceSettings.AuthenticationMethod != "m2m" {
+			return nil, fmt.Errorf("authentication method %s is not supported with useKernel, use m2m or a personal access token", datasourceSettings.AuthenticationMethod)
+		}
+
+		opts := []dbsql.ConnOption{
 			dbsql.WithServerHostname(datasourceSettings.Hostname),
 			dbsql.WithHTTPPath(datasourceSettings.Path),
 			dbsql.WithPort(port),
 			dbsql.WithAuthenticator(authenticator),
-			dbsql.WithTimeout(connectionSettings.Timeout),
 			dbsql.WithMaxRows(connectionSettings.MaxRows),
 			dbsql.WithRetries(connectionSettings.Retries, connectionSettings.RetryBackoff, connectionSettings.MaxRetryDuration),
-		)
+		}
+		connector, err := dbsql.NewConnector(append(opts, backendOptions(datasourceSettings.UseKernel, connectionSettings.Timeout)...)...)
 		if err != nil {
 			log.DefaultLogger.Info("Connector Error", "err", err)
 			return nil, err
@@ -178,15 +197,15 @@ func NewSampleDatasource(ctx context.Context, settings backend.DataSourceInstanc
 			authMethod:         datasourceSettings.AuthenticationMethod,
 		}, nil
 	case "dsn", "":
-		connector, err := dbsql.NewConnector(
+		opts := []dbsql.ConnOption{
 			dbsql.WithAccessToken(settings.DecryptedSecureJSONData["token"]),
 			dbsql.WithServerHostname(datasourceSettings.Hostname),
 			dbsql.WithPort(port),
 			dbsql.WithHTTPPath(datasourceSettings.Path),
-			dbsql.WithTimeout(connectionSettings.Timeout),
 			dbsql.WithMaxRows(connectionSettings.MaxRows),
 			dbsql.WithRetries(connectionSettings.Retries, connectionSettings.RetryBackoff, connectionSettings.MaxRetryDuration),
-		)
+		}
+		connector, err := dbsql.NewConnector(append(opts, backendOptions(datasourceSettings.UseKernel, connectionSettings.Timeout)...)...)
 		if err != nil {
 			log.DefaultLogger.Info("Connector Error", "err", err)
 			return nil, err

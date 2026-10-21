@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Feature: Upgrade databricks-sql-go from v1.7.0 to v1.17.0
+- Feature: Optional Statement Execution API (SEA) protocol for Lakehouse/RT warehouses (`useKernel`, requires a `databricks_kernel` build)
+
+---
+
 ## 1.3.8
 
 - Refactor: User context for oauth token pass-through
